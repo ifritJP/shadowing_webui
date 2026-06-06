@@ -1,0 +1,39 @@
+[project]
+name = "study-lang"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    "qwen-asr>=0.0.6",
+    "qwen-tts>=0.1.1",
+]
+
+[dependency-groups]
+dev = [
+  "ipython>=8.31.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+{ index = "pytorch-gpu"  }
+]
+torchvision = [
+{ index = "pytorch-gpu"  }
+]
+torchaudio = [
+{ index = "pytorch-gpu"  }
+]
+
+[tool.uv]
+# 現状 qwen-tts と qwen-asr とで要求する transformers のバージョンが異なる問題がある。
+# これを通すため強制的に使用バージョンを指定する。
+# 将来、 qwen 側が対応すれば不要。
+override-dependencies = [
+  "transformers==4.57.6",
+]

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>study-lang ORT WebGPU diagnostic</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <a class="top-link" href="./index.html">← Back to mobile ASR page</a>
+
+      <header class="hero">
+        <p class="eyebrow">study-lang diagnostic</p>
+        <h1>ONNX Runtime WebGPU smoke test</h1>
+        <p class="lede">
+          This page bypasses `transformers.js` and runs a tiny ONNX matmul model directly with `onnxruntime-web/webgpu`.
+        </p>
+        <p class="lede">
+          If the WebGPU run succeeds here, the browser and low-level runtime path are basically healthy, and the remaining issues are likely model-specific.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>1. Run diagnostic</h2>
+        <div class="button-row two-up">
+          <button id="run-webgpu-button" type="button">Run WebGPU smoke test</button>
+          <button id="run-wasm-button" type="button">Run WASM baseline</button>
+        </div>
+        <p id="run-status" class="hint">Pick WebGPU first. The WASM button is only a baseline for comparison.</p>
+      </section>
+
+      <section class="card">
+        <h2>2. Browser capability snapshot</h2>
+        <dl class="meta-grid">
+          <div>
+            <dt>Secure context</dt>
+            <dd id="cap-secure-context">-</dd>
+          </div>
+          <div>
+            <dt>`navigator.gpu`</dt>
+            <dd id="cap-navigator-gpu">-</dd>
+          </div>
+          <div>
+            <dt>Adapter</dt>
+            <dd id="cap-adapter">-</dd>
+          </div>
+          <div>
+            <dt>`shader-f16`</dt>
+            <dd id="cap-shader-f16">-</dd>
+          </div>
+        </dl>
+
+        <label class="field-label" for="cap-user-agent">User agent</label>
+        <textarea id="cap-user-agent" rows="3" readonly></textarea>
+
+        <label class="field-label" for="cap-adapter-info">Adapter info</label>
+        <textarea id="cap-adapter-info" rows="4" readonly></textarea>
+      </section>
+
+      <section class="card">
+        <h2>3. Last run summary</h2>
+        <dl class="meta-grid">
+          <div>
+            <dt>Requested EP</dt>
+            <dd id="summary-ep">-</dd>
+          </div>
+          <div>
+            <dt>ORT version</dt>
+            <dd id="summary-version">-</dd>
+          </div>
+          <div>
+            <dt>Session create</dt>
+            <dd id="summary-session-ms">-</dd>
+          </div>
+          <div>
+            <dt>Inference run</dt>
+            <dd id="summary-run-ms">-</dd>
+          </div>
+          <div>
+            <dt>Output check</dt>
+            <dd id="summary-verified">-</dd>
+          </div>
+          <div>
+            <dt>Model size</dt>
+            <dd id="summary-model-size">-</dd>
+          </div>
+        </dl>
+        <div id="summary-banner" class="status-banner">No diagnostic run yet.</div>
+      </section>
+
+      <section class="card">
+        <h2>4. Result tensor</h2>
+        <label class="field-label" for="expected-output">Expected output</label>
+        <textarea id="expected-output" rows="4" readonly></textarea>
+        <label class="field-label" for="actual-output">Actual output</label>
+        <textarea id="actual-output" rows="4" readonly></textarea>
+      </section>
+
+      <section class="card">
+        <h2>5. Event log</h2>
+        <ul id="log-list" class="log-list"></ul>
+      </section>
+    </main>
+
+    <script type="module" src="./ort-webgpu-diagnostic.js"></script>
+  </body>
+</html>

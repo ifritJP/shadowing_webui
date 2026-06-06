@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>study-lang mobile ASR</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <p class="eyebrow">study-lang mobile</p>
+        <h1>English ASR practice</h1>
+        <p class="lede">
+          Upload a study bundle generated on PC, play the cloned audio, then record and transcribe your own voice in the browser.
+        </p>
+        <p class="lede">
+          Need a lower-level runtime check? Open the <a class="inline-link" href="./ort-webgpu-diagnostic.html">standalone ONNX Runtime WebGPU diagnostic</a>.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>1. Upload study bundle</h2>
+        <input id="bundle-input" type="file" accept=".zip" />
+        <p id="bundle-status" class="hint">Upload a ZIP created by the PC workflow.</p>
+      </section>
+
+      <section class="card">
+        <h2>2. Choose ASR engine</h2>
+        <label class="field-label" for="asr-engine">Engine</label>
+        <select id="asr-engine">
+          <option value="speech-recognition">Browser SpeechRecognition</option>
+          <option value="oss-local" selected>OSS local model bundle</option>
+        </select>
+        <p id="engine-status" class="hint">
+          Start with the browser engine for the fastest path, or switch to the uploaded OSS model for more reproducible testing.
+        </p>
+
+        <div id="oss-model-panel" hidden>
+          <label class="field-label" for="model-bundle-input">OSS model bundle</label>
+          <input id="model-bundle-input" type="file" accept=".zip" />
+          
+          <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+            <label class="field-label" for="model-url-input">Or load from URL (avoids Chrome sandbox upload issues)</label>
+            <div style="display: flex; gap: 8px;">
+              <input id="model-url-input" type="text" placeholder="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" value="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" style="flex: 1;" />
+              <button id="load-model-url-button" type="button" style="width: auto; white-space: nowrap;">Fetch & Load</button>
+            </div>
+          </div>
+          
+          <p id="model-status" class="hint">Upload a model ZIP or specify a URL to load.</p>
+
+          <dl class="meta-grid compact-grid" id="model-meta" hidden>
+            <div>
+              <dt>Model</dt>
+              <dd id="model-id">-</dd>
+            </div>
+            <div>
+              <dt>Preferred backend</dt>
+              <dd id="model-device">-</dd>
+            </div>
+            <div>
+              <dt>Dtype</dt>
+              <dd id="model-dtype">-</dd>
+            </div>
+            <div>
+              <dt>Packaged files</dt>
+              <dd id="model-file-count">-</dd>
+            </div>
+          </dl>
+
+          <button id="load-model-button" type="button" disabled>Load OSS model</button>
+        </div>
+      </section>
+
+      <section class="card" id="bundle-panel" hidden>
+        <h2>3. Review bundle</h2>
+        <dl class="meta-grid">
+          <div>
+            <dt>Language</dt>
+            <dd id="bundle-language">-</dd>
+          </div>
+          <div>
+            <dt>TTS model</dt>
+            <dd id="bundle-model">-</dd>
+          </div>
+        </dl>
+        <label class="field-label" for="source-text">Source text</label>
+        <textarea id="source-text" rows="8" readonly></textarea>
+        <audio id="reference-audio" controls></audio>
+        <div style="margin-top: 14px; display: flex; justify-content: center;">
+          <button id="transcribe-reference-button" type="button" disabled style="width: auto;">ASR uploaded sample audio</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>4. Record and transcribe</h2>
+        <div class="button-row">
+          <button id="record-button" type="button">Start recording</button>
+          <button id="stop-button" type="button" disabled>Stop</button>
+          <button id="transcribe-button" type="button" disabled>Transcribe</button>
+        </div>
+        <p id="recording-status" class="hint">Microphone permission will be requested on first use.</p>
+        <div style="margin-top: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.9rem;">
+            <input id="auto-asr-checkbox" type="checkbox" style="width: auto; margin: 0;" />
+            <span>録音停止後、自動で ASR を実行する</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.9rem;">
+            <input id="auto-compare-checkbox" type="checkbox" style="width: auto; margin: 0;" />
+            <span>ASR 実行後、自動で比較する</span>
+          </label>
+        </div>
+        <div id="asr-progress-container" class="status-banner" hidden style="margin-top: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div class="spinner" style="width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <span id="asr-progress-text">Transcribing audio with OSS local model...</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-value"></div>
+          </div>
+        </div>
+        <audio id="recorded-audio" controls hidden></audio>
+      </section>
+
+      <section class="card">
+        <h2>5. Result</h2>
+        <label class="field-label" for="transcript-text">Transcript</label>
+        <textarea id="transcript-text" rows="4" placeholder="Transcription result appears here"></textarea>
+        
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          <button id="compare-text-button" type="button" style="width: auto;">Compare Texts (Show Diff)</button>
+        </div>
+        
+        <div id="comparison-panel" class="score-panel" hidden style="margin-top: 14px;">
+          <p class="field-label">Differences (Source vs. ASR)</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div>
+              <p class="hint" style="margin: 0 0 6px 0; font-size: 0.8rem;">ASR Transcript (Green = Matched, Red = Wrong/Insertion)</p>
+              <div id="comparison-target" class="mono-block" style="font-size: 0.9rem; padding: 10px; background: #0d142b; min-height: 80px; max-height: 250px; overflow-y: auto;"></div>
+            </div>
+            <div>
+              <p class="hint" style="margin: 0 0 6px 0; font-size: 0.8rem;">Source Text (Red/Strikethrough = Skipped)</p>
+              <div id="comparison-source" class="mono-block" style="font-size: 0.9rem; padding: 10px; background: #0d142b; min-height: 80px; max-height: 250px; overflow-y: auto;"></div>
+            </div>
+          </div>
+        </div>
+        <div id="runtime-panel" class="score-panel" hidden>
+          <p><strong>Engine:</strong> <span id="runtime-engine">-</span></p>
+          <p><strong>Backend:</strong> <span id="runtime-backend">-</span></p>
+          <p><strong>Model load:</strong> <span id="runtime-load">-</span></p>
+          <p><strong>Transcription:</strong> <span id="runtime-transcribe">-</span></p>
+          <p><strong>Decode:</strong> <span id="runtime-decode">-</span></p>
+          <p><strong>Model run:</strong> <span id="runtime-model">-</span></p>
+          <p><strong>Postprocess:</strong> <span id="runtime-post">-</span></p>
+        </div>
+        <div id="score-panel" class="score-panel" hidden>
+          <p><strong>Word overlap:</strong> <span id="score-value">0%</span></p>
+          <p id="score-note" class="hint"></p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Storage</h2>
+        <p class="hint">Persisted data in this browser (IndexedDB):</p>
+        <div id="storage-list-container" class="mono-block" style="margin-bottom: 12px; font-size: 0.9rem; padding: 10px 14px;">
+          Checking storage content...
+        </div>
+        <button id="clear-storage-button" type="button" style="background: linear-gradient(135deg, #ff7b90, #ff4d6a);">Clear browser storage</button>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

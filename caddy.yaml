@@ -1,0 +1,7 @@
+{
+    auto_https disable_redirects
+}
+
+192.168.0.199:8443 {
+    file_server browse
+}
