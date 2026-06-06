@@ -16,4 +16,5 @@ wheels/
 .local/
 .ipython/
 .vscode/
+/history/
 
