@@ -60,7 +60,10 @@
           
           <p id="tts-status" class="hint" style="margin-top: 10px;">Ready to generate bundle.</p>
           
-          <button id="generate-bundle-button" type="button" style="margin-top: 10px;">Generate & Add to List</button>
+          <div style="margin-top: 10px; display: flex; gap: 10px;">
+            <button id="generate-bundle-button" type="button" style="flex: 1;">Generate & Add to List</button>
+            <button id="generate-all-grade-button" type="button" style="flex: 1; background: linear-gradient(135deg, #e67e22, #d35400);">Generate All for Selected Grade</button>
+          </div>
         </div>
 
         <div id="tts-queue-container" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;" hidden>

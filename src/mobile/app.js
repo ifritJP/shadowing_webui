@@ -50,6 +50,7 @@ const ttsTextInput = document.querySelector('#tts-text-input');
 const ttsRefAudioInput = document.querySelector('#tts-ref-audio-input');
 const ttsStatus = document.querySelector('#tts-status');
 const generateBundleButton = document.querySelector('#generate-bundle-button');
+const generateAllGradeButton = document.querySelector('#generate-all-grade-button');
 const ttsLevelSelect = document.querySelector('#tts-level-select');
 const ttsPhraseSelect = document.querySelector('#tts-phrase-select');
 
@@ -130,6 +131,7 @@ let originalWindowFetch = null;
 
 bundleInput.addEventListener('change', handleBundleUpload);
 generateBundleButton.addEventListener('click', handleGenerateBundle);
+generateAllGradeButton.addEventListener('click', handleGenerateAllGradePhrases);
 createBundleButton.addEventListener('click', createBundleFromQueue);
 bundleItemSelect.addEventListener('change', handleBundleItemChange);
 ttsLevelSelect.addEventListener('change', updateTtsPhraseOptions);
@@ -246,6 +248,78 @@ async function handleGenerateBundle() {
     ttsStatus.textContent = `Generation failed: ${error.message}`;
   } finally {
     generateBundleButton.disabled = false;
+  }
+}
+
+async function handleGenerateAllGradePhrases() {
+  const level = ttsLevelSelect.value;
+  const phrases = GRADE_PHRASES[level] || [];
+  if (phrases.length === 0) {
+    ttsStatus.textContent = 'No phrases found for the selected grade level.';
+    return;
+  }
+
+  generateBundleButton.disabled = true;
+  generateAllGradeButton.disabled = true;
+
+  try {
+    for (let i = 0; i < phrases.length; i += 1) {
+      const phrase = phrases[i];
+      ttsStatus.textContent = `Generating phrase ${i + 1}/${phrases.length} for ${level.toUpperCase()}...`;
+
+      const formData = new FormData();
+      formData.append('text', phrase);
+
+      const [refAudioFile] = ttsRefAudioInput.files ?? [];
+      if (refAudioFile) {
+        formData.append('ref_audio', refAudioFile);
+      }
+
+      const response = await fetch('/api/generate-bundle', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorMsg = await response.text().catch(() => response.statusText);
+        throw new Error(`Failed on phrase ${i + 1}: ${response.status} - ${errorMsg}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      const manifestEntry = zip.file('manifest.json');
+      if (!manifestEntry) {
+        throw new Error('manifest.json not found in the generated ZIP');
+      }
+      const manifest = JSON.parse(await manifestEntry.async('string'));
+      const audioEntry = zip.file(manifest.generated_audio_filename);
+      if (!audioEntry) {
+        throw new Error('Audio file not found in the generated ZIP');
+      }
+
+      const audioBytes = await audioEntry.async('arraybuffer');
+      const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      generatedQueue.push({
+        text: phrase,
+        audioBlob: audioBlob,
+        audioUrl: audioUrl,
+        id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+      });
+
+      renderGeneratedQueue();
+      
+      // 連続リクエストでサーバー過負荷やOOMを防ぐため、少しウェイトを入れる
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    ttsStatus.textContent = `Successfully generated all ${phrases.length} phrases for ${level.toUpperCase()}!`;
+  } catch (error) {
+    console.error(error);
+    ttsStatus.textContent = `Batch generation failed: ${error.message}`;
+  } finally {
+    generateBundleButton.disabled = false;
+    generateAllGradeButton.disabled = false;
   }
 }
 
