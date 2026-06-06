@@ -19,10 +19,13 @@ class ApiHandler(BaseHTTPRequestHandler):
         cwd = Path.cwd().resolve()
         requested_path = self.path.split('?')[0]
         if requested_path == '/' or requested_path == '/index.html':
-            target_path = cwd / 'src' / 'mobile' / 'index.html'
-        else:
-            rel_path = requested_path.lstrip('/')
-            target_path = (cwd / rel_path).resolve()
+            self.send_response(302)
+            self.send_header('Location', '/src/mobile/index.html')
+            self.end_headers()
+            return
+        
+        rel_path = requested_path.lstrip('/')
+        target_path = (cwd / rel_path).resolve()
 
         if not str(target_path).startswith(str(cwd)):
             self.send_error(403, "Forbidden")
