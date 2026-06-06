@@ -136,6 +136,7 @@ ttsLevelSelect.addEventListener('change', updateTtsPhraseOptions);
 ttsPhraseSelect.addEventListener('change', () => {
   ttsTextInput.value = ttsPhraseSelect.value;
 });
+ttsRefAudioInput.addEventListener('change', handleTtsRefAudioChange);
 asrEngine.addEventListener('change', handleEngineChange);
 modelBundleInput.addEventListener('change', handleModelBundleUpload);
 loadModelButton.addEventListener('click', loadUploadedOssModel);
@@ -383,6 +384,23 @@ async function handleBundleItemChange() {
     transcriptText.value = '';
     scorePanel.hidden = true;
     runtimePanel.hidden = true;
+  }
+}
+
+async function handleTtsRefAudioChange(event) {
+  const [file] = event.target.files ?? [];
+  if (!file) {
+    console.log('Reference audio cleared. Deleting from IndexedDB...');
+    await deleteFromIndexedDB('ttsRefAudio');
+    await refreshStorageList();
+    return;
+  }
+  try {
+    console.log('Saving reference audio to IndexedDB:', file.name);
+    await saveToIndexedDB('ttsRefAudio', { name: file.name, data: file });
+    await refreshStorageList();
+  } catch (error) {
+    console.error('Failed to save reference audio:', error);
   }
 }
 
@@ -1459,6 +1477,24 @@ async function getFromIndexedDB(key) {
   }
 }
 
+async function deleteFromIndexedDB(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.delete(key);
+      request.onsuccess = () => {
+        console.log(`Successfully deleted ${key} from IndexedDB.`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error(`Failed to delete ${key} from IndexedDB:`, error);
+  }
+}
+
 async function processStudyBundle(arrayBuffer, sourceLabel) {
   const zip = await JSZip.loadAsync(arrayBuffer);
   const manifestEntry = zip.file('manifest.json');
@@ -1567,6 +1603,22 @@ async function initAppStorage() {
   }
 
   try {
+    const storedTtsRef = await getFromIndexedDB('ttsRefAudio');
+    if (storedTtsRef && storedTtsRef.data) {
+      console.log('Restoring TTS reference audio:', storedTtsRef.name);
+      const file = new File([storedTtsRef.data], storedTtsRef.name, { type: storedTtsRef.data.type || 'audio/wav' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      ttsRefAudioInput.files = dataTransfer.files;
+      ttsStatus.textContent = `Restored reference audio: ${storedTtsRef.name}`;
+    } else {
+      console.log('No stored TTS reference audio found.');
+    }
+  } catch (error) {
+    console.error('Error restoring TTS reference audio:', error);
+  }
+
+  try {
     const storedModel = await getFromIndexedDB('modelBundle');
     if (storedModel && storedModel.data) {
       console.log('Restoring model bundle:', storedModel.name);
@@ -1613,6 +1665,7 @@ async function refreshStorageList() {
   try {
     const studyBundle = await getFromIndexedDB('studyBundle');
     const modelBundle = await getFromIndexedDB('modelBundle');
+    const ttsRefAudio = await getFromIndexedDB('ttsRefAudio');
 
     let html = '<ul style="margin: 0; padding-left: 20px; line-height: 1.6;">';
     
@@ -1621,6 +1674,13 @@ async function refreshStorageList() {
       html += `<li><strong>Study Bundle:</strong> ${studyBundle.name || 'Unnamed'} (${sizeStr})</li>`;
     } else {
       html += '<li><strong>Study Bundle:</strong> None</li>';
+    }
+
+    if (ttsRefAudio && ttsRefAudio.data) {
+      const sizeStr = formatBytes(ttsRefAudio.data.size);
+      html += `<li><strong>TTS Reference Audio:</strong> ${ttsRefAudio.name || 'Unnamed'} (${sizeStr})</li>`;
+    } else {
+      html += '<li><strong>TTS Reference Audio:</strong> None</li>';
     }
 
     if (modelBundle && modelBundle.data) {
