@@ -55,46 +55,46 @@ const ttsPhraseSelect = document.querySelector('#tts-phrase-select');
 
 const GRADE_PHRASES = {
   jhs1: [
-    "Hello. I like playing soccer. I practice it every day.",
-    "This is my dog. His name is Pochi. He can run fast.",
-    "Do you have any pets? I have a small cat at home.",
-    "I get up early. I walk to school with my friends.",
-    "What do you want for lunch? I want to eat pizza."
+    "Hi there. I love playing soccer. Let's play together sometime.",
+    "This is my dog, Pochi. He can run really fast. Look at him go.",
+    "Do you have any pets? I have a cute little cat at home.",
+    "I usually wake up early. Then, I walk to school with my friends.",
+    "What do you want for lunch? I really want to eat pizza today."
   ],
   jhs2: [
-    "I went to Tokyo last week. I bought some nice souvenirs. I will give you one.",
-    "I am going to visit Kyoto next summer. I want to see old temples. It will be fun.",
-    "Playing tennis is a lot of fun. However, it is not easy. I must practice more.",
-    "We have an important English exam tomorrow. I must study hard tonight. I want to get a good score.",
-    "My uncle lives in Canada. He speaks English very well. I want to visit him someday."
+    "I went to Tokyo last weekend. I bought some delicious sweets for you. I hope you will like them.",
+    "I'm going to visit Kyoto next summer. I want to see the old temples there. It's going to be so much fun.",
+    "Playing tennis is really fun, but it's not that easy. I need to practice a lot more with my team.",
+    "We have a big English test tomorrow. I must study hard tonight. I want to get a good grade this time.",
+    "My uncle lives in Canada. He speaks English so well. I really want to visit his place someday."
   ],
   jhs3: [
-    "I have lived in Osaka for three years. I have many friends here. They always help me when I am in trouble.",
-    "This is the book that I bought yesterday. It is very interesting. You should read it when you have time.",
-    "English is spoken by many people all over the world. It is a very useful tool. I want to study abroad in the future.",
-    "Do you know where the nearest library is? I need to return some books. They are already overdue.",
-    "I want to visit a country which has a lot of beautiful nature. I like hiking in the mountains. It makes me feel relaxed."
+    "I've lived in Osaka for three years now. I have made many good friends here. They always help me out whenever I'm in trouble.",
+    "This is the comic book that I bought yesterday. It's so funny. You should borrow it when you have some free time.",
+    "English is spoken by people all over the world. It's a very useful language. I hope to study abroad and make friends from different countries.",
+    "Excuse me, do you know where the nearest convenience store is? I need to buy some drinks and snacks. I'm feeling a bit hungry.",
+    "I want to visit a country that has beautiful beaches. I love swimming in the ocean. It always makes me feel so relaxed and happy."
   ],
   hs1: [
-    "If I had enough money, I would buy that expensive computer. My current laptop is too old to run new software. I really need a faster one for my school projects.",
-    "While walking along the street, I happened to meet an old classmate of mine. We had not seen each other for five years. We decided to have coffee together and talk about old times.",
-    "This is the beautiful town where I was born and raised. It has changed a lot since my childhood, but the people here are still very friendly. I love living in this peaceful place.",
-    "Whatever you decide to do in the future, I will always support your decision. The most important thing is to follow your passion. Do not be afraid of making mistakes along the way.",
-    "It is important for us to protect the environment for future generations. We should reduce our plastic waste in our daily lives. Small actions can make a big difference if we work together."
+    "If I had enough money, I would buy that new laptop. My current one is getting too slow to run my favorite games. I really need a faster one for my online coding classes.",
+    "I happened to run into an old classmate of mine on the street yesterday. We hadn't seen each other since junior high school graduation. We ended up chatting for hours at a nearby coffee shop.",
+    "This is the town where I was born and grew up. It has changed quite a bit since I was a child, but the cozy atmosphere is still the same. I really love this place.",
+    "Whatever you choose to do after graduation, I will always support you. The most important thing is to do what you love. Don't worry too much about making mistakes along the way.",
+    "I think it's important for us to reduce plastic waste in our daily lives. We can start by carrying our own water bottles. Even small changes can make a big difference if everyone helps out."
   ],
   hs2: [
-    "You should have finished your homework before going out with your friends. Now you have to study late at night, which is not good for your health. Please plan your schedule more carefully next time.",
-    "If I had started studying English earlier, I could have communicated better with the international students. I regretted my lack of effort in the past. Therefore, I decided to join an online speaking course today.",
-    "Technology has developed so rapidly that it has changed our daily lives completely. While it brings us great convenience, it also creates new challenges such as online privacy issues. We must learn how to use it wisely and safely.",
-    "I found it quite difficult to express my opinions clearly in front of a large audience. My heart started beating fast, and I forgot what to say. I realized that I need more practice to build my confidence.",
-    "The government is trying to solve the problem of the declining birthrate. They are planning to provide more financial support for families with children. However, many people believe that deeper social changes are necessary to resolve this issue."
+    "You should have told me you were coming to town this weekend. We could have planned a nice dinner together with the rest of our friends. Let me know early next time so we can hang out.",
+    "If I had started preparing for the speech contest a bit earlier, I could have done much better. I was so nervous that I forgot half of my lines. I definitely need to practice speaking in public more often.",
+    "Social media has changed the way we communicate with each other. While it's great for staying in touch with friends far away, it can also take up too much of our time. We should try to balance our online and offline lives.",
+    "I found it pretty hard to adjust to my new school at first. Everything felt so unfamiliar, and I didn't know anyone. But after joining the basketball club, I quickly made some really close friends.",
+    "My parents are planning to renovate our living room next month. They want to make it more spacious and comfortable for family gatherings. I'm looking forward to helping them choose the new furniture and wall colors."
   ],
   hs3: [
-    "Not only did he finish the project on time, but he also exceeded all expectations. His dedication inspired the entire team to work harder. As a result, the company decided to promote him to manager. We are all proud of his outstanding achievement.",
-    "It was the professor's inspiring lecture that motivated me to study computer science at university. Before that, I had no clear idea about my future career path. Now, I am determined to specialize in artificial intelligence. I hope to conduct research that benefits society.",
-    "Recent scientific research suggests that regular physical exercise has a positive effect on memory function. It increases blood flow to the brain and stimulates the growth of new cells. Therefore, taking a short walk during study breaks can improve your learning efficiency. You should try it today.",
-    "Had I known about the sudden cancellation of the flight, I would not have gone to the airport. I ended up waiting there for hours without any clear explanation from the staff. It was a highly frustrating experience, and I will definitely choose a different airline next time.",
-    "With the rapid globalization of the economy, learning multiple languages has become more essential than ever. It not only expands your career opportunities but also deepens your understanding of different cultures. In today's interconnected world, effective communication is the key to personal and professional success."
+    "Not only did she finish the difficult assignment ahead of schedule, but she also helped me fix my code. Her support was a lifesaver, and I couldn't have finished it without her. We celebrated our success with a huge pizza afterward. She is definitely the best study partner.",
+    "It was my high school teacher's advice that made me decide to major in chemistry. Before that talk, I had no idea what I wanted to do in the future. Now, I'm really excited about doing research in the lab. I hope to develop something useful someday.",
+    "Some studies show that listening to instrumental music can actually help you concentrate while studying. It seems to block out distracting background noises and keep your brain focused. I always put on my headphones when I write essays. You should give it a try next time.",
+    "Had I checked the weather forecast this morning, I wouldn't have left my umbrella at home. It started pouring right after I walked out of the station, and I got completely soaked. I'll make sure to double-check the weather app from now on.",
+    "With the summer vacation just around the corner, everyone in my class is busy planning trips. Some are going to the beach, while others prefer relaxing in the mountains. I'm going to visit my grandparents in Hokkaido with my family. I can't wait to eat some delicious seafood."
   ]
 };
 
