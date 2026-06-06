@@ -149,6 +149,7 @@ recordButton.addEventListener('click', startPracticeCapture);
 stopButton.addEventListener('click', stopPracticeCapture);
 transcribeButton.addEventListener('click', transcribeRecording);
 compareTextButton.addEventListener('click', renderComparison);
+storageListContainer.addEventListener('click', handleStorageItemDeleteClick);
 
 // Load options from localStorage
 autoAsrCheckbox.checked = localStorage.getItem('study_lang_auto_asr') === 'true';
@@ -1710,6 +1711,43 @@ async function initAppStorage() {
   await refreshStorageList();
 }
 
+async function handleStorageItemDeleteClick(event) {
+  const btn = event.target.closest('.delete-storage-item-btn');
+  if (!btn) return;
+  
+  const key = btn.getAttribute('data-key');
+  if (!key) return;
+  
+  if (!confirm(`Are you sure you want to delete the saved ${key} from browser storage?`)) {
+    return;
+  }
+  
+  try {
+    await deleteFromIndexedDB(key);
+    console.log(`Deleted ${key} from IndexedDB.`);
+    
+    if (key === 'studyBundle') {
+      resetBundleView();
+      bundleStatus.textContent = 'No study bundle loaded.';
+    } else if (key === 'modelBundle') {
+      loadedLocalAsr = null;
+      activeModelBundle = null;
+      modelMeta.hidden = true;
+      loadModelButton.disabled = true;
+      modelStatus.textContent = 'No local model loaded.';
+    } else if (key === 'ttsRefAudio') {
+      const dataTransfer = new DataTransfer();
+      ttsRefAudioInput.files = dataTransfer.files;
+      ttsStatus.textContent = 'Reference audio cleared.';
+    }
+    
+    await refreshStorageList();
+  } catch (error) {
+    console.error(`Failed to delete ${key} individually:`, error);
+    alert(`Failed to delete item: ${error.message}`);
+  }
+}
+
 async function handleClearStorage() {
   if (!confirm('Are you sure you want to clear all saved study bundles and model bundles from this browser?')) {
     return;
@@ -1741,27 +1779,42 @@ async function refreshStorageList() {
     const modelBundle = await getFromIndexedDB('modelBundle');
     const ttsRefAudio = await getFromIndexedDB('ttsRefAudio');
 
-    let html = '<ul style="margin: 0; padding-left: 20px; line-height: 1.6;">';
+    let html = '<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px;">';
     
     if (studyBundle && studyBundle.data) {
       const sizeStr = formatBytes(studyBundle.data.size);
-      html += `<li><strong>Study Bundle:</strong> ${studyBundle.name || 'Unnamed'} (${sizeStr})</li>`;
+      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 4px;">
+        <span><strong>Study Bundle:</strong> ${studyBundle.name || 'Unnamed'} (${sizeStr})</span>
+        <button type="button" class="delete-storage-item-btn" data-key="studyBundle" style="width: auto; padding: 2px 8px; font-size: 0.75rem; background: #ff4d4d; margin: 0; border: none; border-radius: 3px; cursor: pointer; color: white;">Delete</button>
+      </li>`;
     } else {
-      html += '<li><strong>Study Bundle:</strong> None</li>';
+      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 4px; opacity: 0.5;">
+        <span><strong>Study Bundle:</strong> None</span>
+      </li>`;
     }
 
     if (ttsRefAudio && ttsRefAudio.data) {
       const sizeStr = formatBytes(ttsRefAudio.data.size);
-      html += `<li><strong>TTS Reference Audio:</strong> ${ttsRefAudio.name || 'Unnamed'} (${sizeStr})</li>`;
+      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 4px;">
+        <span><strong>TTS Reference Audio:</strong> ${ttsRefAudio.name || 'Unnamed'} (${sizeStr})</span>
+        <button type="button" class="delete-storage-item-btn" data-key="ttsRefAudio" style="width: auto; padding: 2px 8px; font-size: 0.75rem; background: #ff4d4d; margin: 0; border: none; border-radius: 3px; cursor: pointer; color: white;">Delete</button>
+      </li>`;
     } else {
-      html += '<li><strong>TTS Reference Audio:</strong> None</li>';
+      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 4px; opacity: 0.5;">
+        <span><strong>TTS Reference Audio:</strong> None</span>
+      </li>`;
     }
 
     if (modelBundle && modelBundle.data) {
       const sizeStr = formatBytes(modelBundle.data.size);
-      html += `<li><strong>Model Bundle:</strong> ${modelBundle.name || 'Unnamed'} (${sizeStr})</li>`;
+      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 4px;">
+        <span><strong>Model Bundle:</strong> ${modelBundle.name || 'Unnamed'} (${sizeStr})</span>
+        <button type="button" class="delete-storage-item-btn" data-key="modelBundle" style="width: auto; padding: 2px 8px; font-size: 0.75rem; background: #ff4d4d; margin: 0; border: none; border-radius: 3px; cursor: pointer; color: white;">Delete</button>
+      </li>`;
     } else {
-      html += '<li><strong>Model Bundle:</strong> None</li>';
+      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 4px; opacity: 0.5;">
+        <span><strong>Model Bundle:</strong> None</span>
+      </li>`;
     }
 
     html += '</ul>';
