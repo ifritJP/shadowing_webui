@@ -53,6 +53,15 @@ const generateBundleButton = document.querySelector('#generate-bundle-button');
 const ttsLevelSelect = document.querySelector('#tts-level-select');
 const ttsPhraseSelect = document.querySelector('#tts-phrase-select');
 
+const ttsQueueContainer = document.querySelector('#tts-queue-container');
+const ttsQueueCount = document.querySelector('#tts-queue-count');
+const ttsQueueList = document.querySelector('#tts-queue-list');
+const createBundleButton = document.querySelector('#create-bundle-button');
+const bundleItemSelectorContainer = document.querySelector('#bundle-item-selector-container');
+const bundleItemSelect = document.querySelector('#bundle-item-select');
+
+let generatedQueue = [];
+
 const GRADE_PHRASES = {
   jhs1: [
     "Hi there. I love playing soccer. Let's play together sometime.",
@@ -121,6 +130,8 @@ let originalWindowFetch = null;
 
 bundleInput.addEventListener('change', handleBundleUpload);
 generateBundleButton.addEventListener('click', handleGenerateBundle);
+createBundleButton.addEventListener('click', createBundleFromQueue);
+bundleItemSelect.addEventListener('change', handleBundleItemChange);
 ttsLevelSelect.addEventListener('change', updateTtsPhraseOptions);
 ttsPhraseSelect.addEventListener('change', () => {
   ttsTextInput.value = ttsPhraseSelect.value;
@@ -202,21 +213,176 @@ async function handleGenerateBundle() {
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const zipBlob = new Blob([arrayBuffer]);
     
-    console.log('Saving generated study bundle to IndexedDB...');
-    await saveToIndexedDB('studyBundle', { name: `generated_${Date.now()}.zip`, data: zipBlob });
+    // ZIPを展開してデータを取り出す
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const manifestEntry = zip.file('manifest.json');
+    if (!manifestEntry) {
+      throw new Error('manifest.json not found in the generated ZIP');
+    }
+    const manifest = JSON.parse(await manifestEntry.async('string'));
+    const audioEntry = zip.file(manifest.generated_audio_filename);
+    if (!audioEntry) {
+      throw new Error('Audio file not found in the generated ZIP');
+    }
     
-    resetBundleView();
-    await processStudyBundle(arrayBuffer, 'generated via TTS');
-    await refreshStorageList();
-    
-    ttsStatus.textContent = 'Bundle generated and loaded successfully!';
+    const audioBytes = await audioEntry.async('arraybuffer');
+    const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+
+    // リストへ追加
+    generatedQueue.push({
+      text: text,
+      audioBlob: audioBlob,
+      audioUrl: audioUrl,
+      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+    });
+
+    renderGeneratedQueue();
+    ttsStatus.textContent = 'Phrase and audio added to list!';
   } catch (error) {
     console.error(error);
     ttsStatus.textContent = `Generation failed: ${error.message}`;
   } finally {
     generateBundleButton.disabled = false;
+  }
+}
+
+function renderGeneratedQueue() {
+  ttsQueueList.innerHTML = '';
+  ttsQueueCount.textContent = String(generatedQueue.length);
+
+  if (generatedQueue.length > 0) {
+    ttsQueueContainer.hidden = false;
+  } else {
+    ttsQueueContainer.hidden = true;
+    return;
+  }
+
+  generatedQueue.forEach((item, index) => {
+    const div = document.createElement('div');
+    div.style = 'display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 4px;';
+
+    const span = document.createElement('span');
+    span.style = 'flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-size: 0.85rem;';
+    span.textContent = `${index + 1}. ${item.text}`;
+    span.title = item.text;
+
+    const btnContainer = document.createElement('div');
+    btnContainer.style = 'display: flex; gap: 6px;';
+
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.textContent = 'Play';
+    playBtn.style = 'padding: 2px 8px; font-size: 0.75rem; width: auto; background: #33cc66;';
+    playBtn.addEventListener('click', () => {
+      const audio = new Audio(item.audioUrl);
+      audio.play();
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.textContent = 'Delete';
+    delBtn.style = 'padding: 2px 8px; font-size: 0.75rem; width: auto; background: #ff4d4d;';
+    delBtn.addEventListener('click', () => {
+      URL.revokeObjectURL(item.audioUrl);
+      generatedQueue = generatedQueue.filter((q) => q.id !== item.id);
+      renderGeneratedQueue();
+    });
+
+    btnContainer.appendChild(playBtn);
+    btnContainer.appendChild(delBtn);
+    div.appendChild(span);
+    div.appendChild(btnContainer);
+    ttsQueueList.appendChild(div);
+  });
+}
+
+async function createBundleFromQueue() {
+  if (generatedQueue.length === 0) {
+    return;
+  }
+
+  createBundleButton.disabled = true;
+  ttsStatus.textContent = 'Packaging study bundle ZIP...';
+
+  try {
+    const zip = new JSZip();
+    
+    // items 配列を構築
+    const items = generatedQueue.map((item, idx) => {
+      return {
+        source_text: item.text,
+        audio_filename: `audio_${idx}.wav`
+      };
+    });
+
+    const manifest = {
+      source_text: generatedQueue[0].text,
+      generated_audio_filename: "audio_0.wav",
+      language: "English",
+      tts_model_name: "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      created_at: new Date().toISOString(),
+      schema_version: 2,
+      items: items
+    };
+
+    zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+
+    // 各音声を追加
+    for (let i = 0; i < generatedQueue.length; i += 1) {
+      const item = generatedQueue[i];
+      zip.file(`audio_${i}.wav`, item.audioBlob);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const arrayBuffer = await zipBlob.arrayBuffer();
+
+    // ダウンロード処理
+    const downloadUrl = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `study_bundle_${Date.now()}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(downloadUrl);
+
+    // IndexedDB に保存
+    console.log('Saving generated study bundle to IndexedDB...');
+    await saveToIndexedDB('studyBundle', { name: `generated_${Date.now()}.zip`, data: zipBlob });
+
+    // アプリ上にロード
+    resetBundleView();
+    await processStudyBundle(arrayBuffer, 'packaged from queue');
+    await refreshStorageList();
+
+    ttsStatus.textContent = 'Bundle successfully created, downloaded, and loaded!';
+  } catch (error) {
+    console.error(error);
+    ttsStatus.textContent = `Failed to create bundle: ${error.message}`;
+  } finally {
+    createBundleButton.disabled = false;
+  }
+}
+
+async function handleBundleItemChange() {
+  if (!activeBundle || !activeBundle.items) {
+    return;
+  }
+  const index = parseInt(bundleItemSelect.value, 10);
+  const selectedItem = activeBundle.items[index];
+  if (selectedItem) {
+    sourceText.value = selectedItem.text;
+    referenceAudio.src = selectedItem.audioUrl;
+    transcribeReferenceButton.disabled = false;
+    
+    recordedAudio.hidden = true;
+    recordedAudio.src = '';
+    recordedBlob = null;
+    transcriptText.value = '';
+    scorePanel.hidden = true;
+    runtimePanel.hidden = true;
   }
 }
 
@@ -1305,23 +1471,77 @@ async function processStudyBundle(arrayBuffer, sourceLabel) {
   if (manifest.format === 'study-lang-mobile-asr-model-bundle/v1') {
     throw new Error('This ZIP appears to be an ASR model bundle. Please upload it under the "Choose ASR engine" -> "OSS model bundle" section below.');
   }
-  if (!manifest.generated_audio_filename || !manifest.source_text) {
+  
+  const hasMultipleItems = Array.isArray(manifest.items) && manifest.items.length > 0;
+  
+  if (!hasMultipleItems && (!manifest.generated_audio_filename || !manifest.source_text)) {
     throw new Error('Invalid study bundle format. Missing generated_audio_filename or source_text in manifest.json.');
   }
 
-  const audioEntry = zip.file(manifest.generated_audio_filename);
-  if (!audioEntry) {
-    throw new Error(`Audio file ${manifest.generated_audio_filename} was not found in the bundle.`);
+  let items = [];
+
+  if (hasMultipleItems) {
+    for (let i = 0; i < manifest.items.length; i += 1) {
+      const item = manifest.items[i];
+      const audioEntry = zip.file(item.audio_filename);
+      if (!audioEntry) {
+        throw new Error(`Audio file ${item.audio_filename} not found in bundle.`);
+      }
+      const audioBytes = await audioEntry.async('arraybuffer');
+      const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      items.push({
+        text: item.source_text,
+        audioBlob,
+        audioUrl
+      });
+    }
+  } else {
+    const audioEntry = zip.file(manifest.generated_audio_filename);
+    if (!audioEntry) {
+      throw new Error(`Audio file ${manifest.generated_audio_filename} was not found in the bundle.`);
+    }
+    const audioBlob = new Blob([await audioEntry.async('arraybuffer')], { type: 'audio/wav' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    items.push({
+      text: manifest.source_text,
+      audioBlob,
+      audioUrl
+    });
   }
 
-  const audioBlob = new Blob([await audioEntry.async('arraybuffer')], { type: guessAudioMime(manifest.generated_audio_filename) });
-  const audioUrl = URL.createObjectURL(audioBlob);
+  if (activeBundle && activeBundle.items) {
+    activeBundle.items.forEach((item) => URL.revokeObjectURL(item.audioUrl));
+  } else if (activeBundle && activeBundle.audioUrl) {
+    URL.revokeObjectURL(activeBundle.audioUrl);
+  }
 
-  activeBundle = { manifest, audioBlob, audioUrl };
+  activeBundle = { 
+    manifest, 
+    items,
+    audioBlob: items[0].audioBlob,
+    audioUrl: items[0].audioUrl
+  };
+
   bundleLanguage.textContent = manifest.language;
   bundleModel.textContent = manifest.tts_model_name;
-  sourceText.value = manifest.source_text;
-  referenceAudio.src = audioUrl;
+
+  bundleItemSelect.innerHTML = '';
+  if (hasMultipleItems) {
+    items.forEach((item, idx) => {
+      const option = document.createElement('option');
+      option.value = String(idx);
+      option.textContent = item.text.length > 50 ? item.text.substring(0, 47) + '...' : item.text;
+      bundleItemSelect.appendChild(option);
+    });
+    bundleItemSelectorContainer.hidden = false;
+  } else {
+    bundleItemSelectorContainer.hidden = true;
+  }
+
+  sourceText.value = items[0].text;
+  referenceAudio.src = items[0].audioUrl;
+  
   bundlePanel.hidden = false;
   transcribeButton.disabled = true;
   transcribeReferenceButton.disabled = false;

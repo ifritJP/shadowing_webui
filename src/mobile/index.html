@@ -60,7 +60,15 @@
           
           <p id="tts-status" class="hint" style="margin-top: 10px;">Ready to generate bundle.</p>
           
-          <button id="generate-bundle-button" type="button" style="margin-top: 10px;">Generate & Load</button>
+          <button id="generate-bundle-button" type="button" style="margin-top: 10px;">Generate & Add to List</button>
+        </div>
+
+        <div id="tts-queue-container" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;" hidden>
+          <label class="field-label" style="font-weight: bold; margin-bottom: 8px;">Generated Phrase List (<span id="tts-queue-count">0</span> phrases)</label>
+          <div id="tts-queue-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 200px; overflow-y: auto; background: #0d142b; padding: 10px; border-radius: 4px;">
+            <!-- 動的生成 -->
+          </div>
+          <button id="create-bundle-button" type="button" style="background: linear-gradient(135deg, #1aa3ff, #0066cc);">Create & Load Study Bundle</button>
         </div>
       </section>
 
@@ -114,6 +122,12 @@
 
       <section class="card" id="bundle-panel" hidden>
         <h2>3. Review bundle</h2>
+        <div id="bundle-item-selector-container" hidden style="margin-bottom: 14px;">
+          <label class="field-label" for="bundle-item-select" style="font-weight: bold; margin-bottom: 6px;">Switch Phrase in Bundle</label>
+          <select id="bundle-item-select" style="width: 100%;">
+            <!-- 動的生成 -->
+          </select>
+        </div>
         <dl class="meta-grid">
           <div>
             <dt>Language</dt>
