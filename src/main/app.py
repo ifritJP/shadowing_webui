@@ -113,7 +113,16 @@ def run(port: int = 8000) -> None:
 
 
 def main() -> int:
-    run()
+    import argparse
+    parser = argparse.ArgumentParser(description="Study Lang API Server")
+    parser.add_argument(
+        '-p', '--port',
+        type=int,
+        default=8000,
+        help="Port number to run the API server on (default: 8000)"
+    )
+    args = parser.parse_args()
+    run(port=args.port)
     return 0
 
 
