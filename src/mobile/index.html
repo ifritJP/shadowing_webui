@@ -29,6 +29,26 @@
         <div>
           <label class="field-label" style="font-weight: bold; margin-bottom: 8px;">Option B: Generate study bundle via TTS (Voice Clone)</label>
           
+          <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label class="field-label" for="tts-level-select">Grade Level</label>
+              <select id="tts-level-select">
+                <option value="jhs1">中学1年 (JHS 1)</option>
+                <option value="jhs2">中学2年 (JHS 2)</option>
+                <option value="jhs3">中学3年 (JHS 3)</option>
+                <option value="hs1">高校1年 (HS 1)</option>
+                <option value="hs2">高校2年 (HS 2)</option>
+                <option value="hs3">高校3年 (HS 3)</option>
+              </select>
+            </div>
+            <div style="flex: 2;">
+              <label class="field-label" for="tts-phrase-select">Select Phrase</label>
+              <select id="tts-phrase-select" style="width: 100%;">
+                <!-- JSにより動的に挿入 -->
+              </select>
+            </div>
+          </div>
+          
           <label class="field-label" for="tts-text-input">Phrase text to synthesize</label>
           <textarea id="tts-text-input" rows="3" placeholder="Enter English phrase..."></textarea>
           

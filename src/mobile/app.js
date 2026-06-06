@@ -50,6 +50,53 @@ const ttsTextInput = document.querySelector('#tts-text-input');
 const ttsRefAudioInput = document.querySelector('#tts-ref-audio-input');
 const ttsStatus = document.querySelector('#tts-status');
 const generateBundleButton = document.querySelector('#generate-bundle-button');
+const ttsLevelSelect = document.querySelector('#tts-level-select');
+const ttsPhraseSelect = document.querySelector('#tts-phrase-select');
+
+const GRADE_PHRASES = {
+  jhs1: [
+    "Hello, my name is Ken. I like playing soccer.",
+    "This is my dog. His name is Pochi. He can run fast.",
+    "Do you have any brothers or sisters? I have one sister.",
+    "What time do you usually go to bed? I go to bed at ten.",
+    "I play baseball in the park every Saturday with my friends."
+  ],
+  jhs2: [
+    "I went to Tokyo last week. I bought some souvenirs for you.",
+    "I am going to visit Kyoto next summer. I want to see old temples.",
+    "Playing tennis is a lot of fun, but it is not easy for me.",
+    "You must study hard because we have an important English exam tomorrow.",
+    "Mt. Fuji is higher than any other mountain in Japan. It is very beautiful."
+  ],
+  jhs3: [
+    "I have lived in Osaka for three years. I have many friends here.",
+    "This is the book that I bought yesterday. It is very interesting.",
+    "English is spoken by many people all over the world.",
+    "Do you know where the nearest library is? I need to return some books.",
+    "I want to visit a country which has a lot of beautiful nature."
+  ],
+  hs1: [
+    "If I had enough money, I would buy that expensive computer.",
+    "Walking along the street, I happened to meet an old classmate of mine.",
+    "This is the town where I was born and raised until I was ten.",
+    "Whatever you decide to do, I will always support your decision.",
+    "It is important for us to protect the environment for future generations."
+  ],
+  hs2: [
+    "You should have finished your homework before going out with your friends.",
+    "If I had started studying earlier, I could have passed the examination.",
+    "Technology has developed so rapidly that it has changed our daily lives completely.",
+    "I found it difficult to express my opinions clearly in public.",
+    "The government is trying to solve the problem of declining birthrates."
+  ],
+  hs3: [
+    "Not only did he finish the project on time, but he also exceeded all expectations.",
+    "It was the professor's lecture that inspired me to study computer science at university.",
+    "Recent research suggests that regular exercise has a positive effect on memory function.",
+    "Had I known about the cancellation of the flight, I would not have gone to the airport.",
+    "With the globalization of the economy, learning multiple languages has become more essential than ever."
+  ]
+};
 
 const DB_NAME = 'StudyLangDB';
 const DB_VERSION = 1;
@@ -74,6 +121,10 @@ let originalWindowFetch = null;
 
 bundleInput.addEventListener('change', handleBundleUpload);
 generateBundleButton.addEventListener('click', handleGenerateBundle);
+ttsLevelSelect.addEventListener('change', updateTtsPhraseOptions);
+ttsPhraseSelect.addEventListener('change', () => {
+  ttsTextInput.value = ttsPhraseSelect.value;
+});
 asrEngine.addEventListener('change', handleEngineChange);
 modelBundleInput.addEventListener('change', handleModelBundleUpload);
 loadModelButton.addEventListener('click', loadUploadedOssModel);
@@ -97,6 +148,7 @@ autoCompareCheckbox.addEventListener('change', () => {
 });
 
 handleEngineChange();
+updateTtsPhraseOptions();
 initAppStorage();
 
 async function handleBundleUpload(event) {
@@ -165,6 +217,23 @@ async function handleGenerateBundle() {
     ttsStatus.textContent = `Generation failed: ${error.message}`;
   } finally {
     generateBundleButton.disabled = false;
+  }
+}
+
+function updateTtsPhraseOptions() {
+  const level = ttsLevelSelect.value;
+  const phrases = GRADE_PHRASES[level] || [];
+  
+  ttsPhraseSelect.innerHTML = '';
+  phrases.forEach((phrase) => {
+    const option = document.createElement('option');
+    option.value = phrase;
+    option.textContent = phrase.length > 50 ? phrase.substring(0, 47) + '...' : phrase;
+    ttsPhraseSelect.appendChild(option);
+  });
+
+  if (phrases.length > 0) {
+    ttsTextInput.value = phrases[0];
   }
 }
 
