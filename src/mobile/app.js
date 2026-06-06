@@ -46,6 +46,11 @@ const asrProgressText = document.querySelector('#asr-progress-text');
 const autoAsrCheckbox = document.querySelector('#auto-asr-checkbox');
 const autoCompareCheckbox = document.querySelector('#auto-compare-checkbox');
 
+const ttsTextInput = document.querySelector('#tts-text-input');
+const ttsRefAudioInput = document.querySelector('#tts-ref-audio-input');
+const ttsStatus = document.querySelector('#tts-status');
+const generateBundleButton = document.querySelector('#generate-bundle-button');
+
 const DB_NAME = 'StudyLangDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'bundles';
@@ -68,6 +73,7 @@ let transformersModulePromise = null;
 let originalWindowFetch = null;
 
 bundleInput.addEventListener('change', handleBundleUpload);
+generateBundleButton.addEventListener('click', handleGenerateBundle);
 asrEngine.addEventListener('change', handleEngineChange);
 modelBundleInput.addEventListener('change', handleModelBundleUpload);
 loadModelButton.addEventListener('click', loadUploadedOssModel);
@@ -111,6 +117,54 @@ async function handleBundleUpload(event) {
   } catch (error) {
     console.error(error);
     bundleStatus.textContent = error.message;
+  }
+}
+
+async function handleGenerateBundle() {
+  const text = ttsTextInput.value.trim();
+  if (!text) {
+    ttsStatus.textContent = 'Please enter a phrase text to synthesize.';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('text', text);
+
+  const [refAudioFile] = ttsRefAudioInput.files ?? [];
+  if (refAudioFile) {
+    formData.append('ref_audio', refAudioFile);
+  }
+
+  ttsStatus.textContent = 'Generating study bundle via backend Qwen-TTS...';
+  generateBundleButton.disabled = true;
+
+  try {
+    const response = await fetch('/api/generate-bundle', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorMsg = await response.text().catch(() => response.statusText);
+      throw new Error(`Server returned error: ${response.status} - ${errorMsg}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const zipBlob = new Blob([arrayBuffer]);
+    
+    console.log('Saving generated study bundle to IndexedDB...');
+    await saveToIndexedDB('studyBundle', { name: `generated_${Date.now()}.zip`, data: zipBlob });
+    
+    resetBundleView();
+    await processStudyBundle(arrayBuffer, 'generated via TTS');
+    await refreshStorageList();
+    
+    ttsStatus.textContent = 'Bundle generated and loaded successfully!';
+  } catch (error) {
+    console.error(error);
+    ttsStatus.textContent = `Generation failed: ${error.message}`;
+  } finally {
+    generateBundleButton.disabled = false;
   }
 }
 

@@ -1,7 +1,14 @@
 {
     auto_https disable_redirects
+    admin off
 }
 
 192.168.0.199:8443 {
-    file_server browse
+    handle_path /api/* {
+        reverse_proxy localhost:8000
+    }
+    handle {
+        file_server browse
+    }
 }
+

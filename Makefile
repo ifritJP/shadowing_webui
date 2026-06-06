@@ -8,3 +8,7 @@ dev:
 
 start_web:
 	caddy run --config caddy.yaml --adapter caddyfile
+
+start_api:
+	uv run python -m src.main.app
+

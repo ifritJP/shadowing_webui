@@ -20,9 +20,28 @@
       </header>
 
       <section class="card">
-        <h2>1. Upload study bundle</h2>
-        <input id="bundle-input" type="file" accept=".zip" />
-        <p id="bundle-status" class="hint">Upload a ZIP created by the PC workflow.</p>
+        <h2>1. Study bundle (Upload or Generate)</h2>
+        <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 12px;">
+          <label class="field-label" style="font-weight: bold; margin-bottom: 8px;">Option A: Upload study bundle ZIP</label>
+          <input id="bundle-input" type="file" accept=".zip" />
+          <p id="bundle-status" class="hint">Upload a ZIP created by the PC workflow.</p>
+        </div>
+        <div>
+          <label class="field-label" style="font-weight: bold; margin-bottom: 8px;">Option B: Generate study bundle via TTS (Voice Clone)</label>
+          
+          <label class="field-label" for="tts-text-input">Phrase text to synthesize</label>
+          <textarea id="tts-text-input" rows="3" placeholder="Enter English phrase..."></textarea>
+          
+          <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+            <label class="field-label" for="tts-ref-audio-input">Reference audio for voice cloning (WAV, optional)</label>
+            <input id="tts-ref-audio-input" type="file" accept="audio/wav,audio/x-wav" />
+            <p class="hint" style="margin-top: 2px;">If omitted, the default reference audio on the server will be used.</p>
+          </div>
+          
+          <p id="tts-status" class="hint" style="margin-top: 10px;">Ready to generate bundle.</p>
+          
+          <button id="generate-bundle-button" type="button" style="margin-top: 10px;">Generate & Load</button>
+        </div>
       </section>
 
       <section class="card">
