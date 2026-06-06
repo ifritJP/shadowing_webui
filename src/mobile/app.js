@@ -55,46 +55,46 @@ const ttsPhraseSelect = document.querySelector('#tts-phrase-select');
 
 const GRADE_PHRASES = {
   jhs1: [
-    "Hello. I like playing soccer.",
+    "Hello. I like playing soccer. I practice it every day.",
     "This is my dog. His name is Pochi. He can run fast.",
-    "Do you have any brothers or sisters? I have one sister.",
-    "What time do you usually go to bed? I go to bed at ten.",
-    "I play baseball in the park every Saturday with my friends."
+    "Do you have any pets? I have a small cat at home.",
+    "I get up early. I walk to school with my friends.",
+    "What do you want for lunch? I want to eat pizza."
   ],
   jhs2: [
-    "I went to Tokyo last week. I bought some souvenirs for you.",
-    "I am going to visit Kyoto next summer. I want to see old temples.",
-    "Playing tennis is a lot of fun, but it is not easy for me.",
-    "You must study hard because we have an important English exam tomorrow.",
-    "Mt. Fuji is higher than any other mountain in Japan. It is very beautiful."
+    "I went to Tokyo last week. I bought some nice souvenirs. I will give you one.",
+    "I am going to visit Kyoto next summer. I want to see old temples. It will be fun.",
+    "Playing tennis is a lot of fun. However, it is not easy. I must practice more.",
+    "We have an important English exam tomorrow. I must study hard tonight. I want to get a good score.",
+    "My uncle lives in Canada. He speaks English very well. I want to visit him someday."
   ],
   jhs3: [
-    "I have lived in Osaka for three years. I have many friends here.",
-    "This is the book that I bought yesterday. It is very interesting.",
-    "English is spoken by many people all over the world.",
-    "Do you know where the nearest library is? I need to return some books.",
-    "I want to visit a country which has a lot of beautiful nature."
+    "I have lived in Osaka for three years. I have many friends here. They always help me when I am in trouble.",
+    "This is the book that I bought yesterday. It is very interesting. You should read it when you have time.",
+    "English is spoken by many people all over the world. It is a very useful tool. I want to study abroad in the future.",
+    "Do you know where the nearest library is? I need to return some books. They are already overdue.",
+    "I want to visit a country which has a lot of beautiful nature. I like hiking in the mountains. It makes me feel relaxed."
   ],
   hs1: [
-    "If I had enough money, I would buy that expensive computer.",
-    "Walking along the street, I happened to meet an old classmate of mine.",
-    "This is the town where I was born and raised until I was ten.",
-    "Whatever you decide to do, I will always support your decision.",
-    "It is important for us to protect the environment for future generations."
+    "If I had enough money, I would buy that expensive computer. My current laptop is too old to run new software. I really need a faster one for my school projects.",
+    "While walking along the street, I happened to meet an old classmate of mine. We had not seen each other for five years. We decided to have coffee together and talk about old times.",
+    "This is the beautiful town where I was born and raised. It has changed a lot since my childhood, but the people here are still very friendly. I love living in this peaceful place.",
+    "Whatever you decide to do in the future, I will always support your decision. The most important thing is to follow your passion. Do not be afraid of making mistakes along the way.",
+    "It is important for us to protect the environment for future generations. We should reduce our plastic waste in our daily lives. Small actions can make a big difference if we work together."
   ],
   hs2: [
-    "You should have finished your homework before going out with your friends.",
-    "If I had started studying earlier, I could have passed the examination.",
-    "Technology has developed so rapidly that it has changed our daily lives completely.",
-    "I found it difficult to express my opinions clearly in public.",
-    "The government is trying to solve the problem of declining birthrates."
+    "You should have finished your homework before going out with your friends. Now you have to study late at night, which is not good for your health. Please plan your schedule more carefully next time.",
+    "If I had started studying English earlier, I could have communicated better with the international students. I regretted my lack of effort in the past. Therefore, I decided to join an online speaking course today.",
+    "Technology has developed so rapidly that it has changed our daily lives completely. While it brings us great convenience, it also creates new challenges such as online privacy issues. We must learn how to use it wisely and safely.",
+    "I found it quite difficult to express my opinions clearly in front of a large audience. My heart started beating fast, and I forgot what to say. I realized that I need more practice to build my confidence.",
+    "The government is trying to solve the problem of the declining birthrate. They are planning to provide more financial support for families with children. However, many people believe that deeper social changes are necessary to resolve this issue."
   ],
   hs3: [
-    "Not only did he finish the project on time, but he also exceeded all expectations.",
-    "It was the professor's lecture that inspired me to study computer science at university.",
-    "Recent research suggests that regular exercise has a positive effect on memory function.",
-    "Had I known about the cancellation of the flight, I would not have gone to the airport.",
-    "With the globalization of the economy, learning multiple languages has become more essential than ever."
+    "Not only did he finish the project on time, but he also exceeded all expectations. His dedication inspired the entire team to work harder. As a result, the company decided to promote him to manager. We are all proud of his outstanding achievement.",
+    "It was the professor's inspiring lecture that motivated me to study computer science at university. Before that, I had no clear idea about my future career path. Now, I am determined to specialize in artificial intelligence. I hope to conduct research that benefits society.",
+    "Recent scientific research suggests that regular physical exercise has a positive effect on memory function. It increases blood flow to the brain and stimulates the growth of new cells. Therefore, taking a short walk during study breaks can improve your learning efficiency. You should try it today.",
+    "Had I known about the sudden cancellation of the flight, I would not have gone to the airport. I ended up waiting there for hours without any clear explanation from the staff. It was a highly frustrating experience, and I will definitely choose a different airline next time.",
+    "With the rapid globalization of the economy, learning multiple languages has become more essential than ever. It not only expands your career opportunities but also deepens your understanding of different cultures. In today's interconnected world, effective communication is the key to personal and professional success."
   ]
 };
 
