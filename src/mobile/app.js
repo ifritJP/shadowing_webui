@@ -55,7 +55,7 @@ const ttsPhraseSelect = document.querySelector('#tts-phrase-select');
 
 const GRADE_PHRASES = {
   jhs1: [
-    "Hello, I'm Ken. I like playing soccer.",
+    "Hello. I like playing soccer.",
     "This is my dog. His name is Pochi. He can run fast.",
     "Do you have any brothers or sisters? I have one sister.",
     "What time do you usually go to bed? I go to bed at ten.",
