@@ -15,6 +15,45 @@ class ApiHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, "Not Found")
 
+    def do_GET(self) -> None:
+        cwd = Path.cwd().resolve()
+        requested_path = self.path.split('?')[0]
+        if requested_path == '/' or requested_path == '/index.html':
+            target_path = cwd / 'src' / 'mobile' / 'index.html'
+        else:
+            rel_path = requested_path.lstrip('/')
+            target_path = (cwd / rel_path).resolve()
+
+        if not str(target_path).startswith(str(cwd)):
+            self.send_error(403, "Forbidden")
+            return
+
+        if not target_path.exists() or not target_path.is_file():
+            self.send_error(404, "Not Found")
+            return
+
+        mime_types = {
+            '.html': 'text/html; charset=utf-8',
+            '.js': 'application/javascript; charset=utf-8',
+            '.css': 'text/css; charset=utf-8',
+            '.zip': 'application/zip',
+            '.wav': 'audio/wav',
+            '.json': 'application/json; charset=utf-8',
+        }
+        suffix = target_path.suffix.lower()
+        content_type = mime_types.get(suffix, 'application/octet-stream')
+
+        try:
+            content = target_path.read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(content)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(content)
+        except Exception as e:
+            self.send_error(500, f"Internal Server Error: {str(e)}")
+
     def handle_generate_bundle(self) -> None:
         content_type = self.headers.get('Content-Type', '')
         if not content_type.startswith('multipart/form-data'):
