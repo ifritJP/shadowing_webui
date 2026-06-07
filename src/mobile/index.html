@@ -26,8 +26,14 @@
           <input id="bundle-input" type="file" accept=".zip" />
           <p id="bundle-status" class="hint">Upload a ZIP created by the PC workflow.</p>
         </div>
-        <div>
-          <label class="field-label" style="font-weight: bold; margin-bottom: 8px;">Option B: Generate study bundle via TTS (Voice Clone)</label>
+        <details id="tts-details" open>
+          <summary style="font-weight: bold; margin-bottom: 8px; cursor: pointer; color: var(--accent, #a29bfe);">Option B: Generate study bundle via TTS (Voice Clone)</summary>
+          
+          <!-- Warning/Help message for running Python on PC when offline -->
+          <div id="tts-offline-message" style="background: rgba(255, 77, 77, 0.1); border: 1px solid #ff4d4d; color: #ff7b90; padding: 10px; margin-bottom: 12px; border-radius: 4px;" hidden>
+            <p style="margin: 0; font-weight: bold;">⚠️ TTS API server is offline</p>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem;">Voice Clone を使用するには、PC上で Python API サーバーを起動してください (ターミナルで <code>make start_api</code> を実行してください)。</p>
+          </div>
           
           <div style="margin-bottom: 10px; display: flex; gap: 10px;">
             <div style="flex: 1;">
@@ -53,8 +59,9 @@
           <textarea id="tts-text-input" rows="3" placeholder="Enter English phrase..."></textarea>
           
           <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-            <label class="field-label" for="tts-ref-audio-input">Reference audio for voice cloning (WAV, optional)</label>
-            <input id="tts-ref-audio-input" type="file" accept="audio/wav,audio/x-wav" />
+            <label class="field-label" for="tts-ref-audio-input">Reference audio for voice cloning (WAV, MP3, optional)</label>
+            <input id="tts-ref-audio-input" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg,audio/mp3" />
+            <p class="hint" style="margin-top: 2px; color: #ff8ea1; font-weight: 600;">⚠️ 【重要】アップロードする参照音声（WAV/MP3）の著作権や利用許諾、他人の声のクローンに伴う権利侵害等の法的問題がないか十分に確認し、自己責任でご使用ください。</p>
             <p class="hint" style="margin-top: 2px;">If omitted, the default reference audio on the server will be used.</p>
           </div>
           
@@ -64,7 +71,7 @@
             <button id="generate-bundle-button" type="button" style="flex: 1;">Generate & Add to List</button>
             <button id="generate-all-grade-button" type="button" style="flex: 1; background: linear-gradient(135deg, #e67e22, #d35400);">Generate All for Selected Grade</button>
           </div>
-        </div>
+        </details>
 
         <div id="tts-queue-container" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;" hidden>
           <label class="field-label" style="font-weight: bold; margin-bottom: 8px;">Generated Phrase List (<span id="tts-queue-count">0</span> phrases)</label>
@@ -87,18 +94,46 @@
         </p>
 
         <div id="oss-model-panel" hidden>
-          <label class="field-label" for="model-bundle-input">OSS model bundle</label>
-          <input id="model-bundle-input" type="file" accept=".zip" />
-          
-          <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-            <label class="field-label" for="model-url-input">Or load from URL (avoids Chrome sandbox upload issues)</label>
-            <div style="display: flex; gap: 8px;">
-              <input id="model-url-input" type="text" placeholder="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" value="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" style="flex: 1;" />
-              <button id="load-model-url-button" type="button" style="width: auto; white-space: nowrap;">Fetch & Load</button>
+          <div style="margin-bottom: 12px;">
+            <label class="field-label" for="model-source-select">Model Source</label>
+            <select id="model-source-select" style="width: 100%;">
+              <option value="bundle" selected>Local Model Bundle (ZIP / Local URL)</option>
+              <option value="huggingface">Hugging Face Hub (Direct download in browser)</option>
+            </select>
+          </div>
+
+          <!-- Local Bundle Section -->
+          <div id="model-source-bundle-container">
+            <label class="field-label" for="model-bundle-input">OSS model bundle</label>
+            <input id="model-bundle-input" type="file" accept=".zip" />
+            
+            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+              <label class="field-label" for="model-url-input">Or load from URL (avoids Chrome sandbox upload issues)</label>
+              <div style="display: flex; gap: 8px;">
+                <input id="model-url-input" type="text" placeholder="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" value="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" style="flex: 1;" />
+                <button id="load-model-url-button" type="button" style="width: auto; white-space: nowrap;">Fetch & Load</button>
+              </div>
             </div>
           </div>
+
+          <!-- Hugging Face Hub Section -->
+          <div id="model-source-hf-container" hidden style="margin-top: 10px;">
+            <label class="field-label" for="model-hf-select">Choose Whisper Model</label>
+            <select id="model-hf-select" style="width: 100%; margin-bottom: 8px;">
+              <option value="onnx-community/whisper-tiny">Whisper Tiny (Multi-lingual) - ~40MB</option>
+              <option value="onnx-community/whisper-tiny.en">Whisper Tiny (English-only) - ~40MB</option>
+              <option value="onnx-community/whisper-base" selected>Whisper Base (Multi-lingual) (Recommended) - ~75MB</option>
+              <option value="onnx-community/whisper-base.en">Whisper Base (English-only) - ~75MB</option>
+            </select>
+            <label class="field-label" for="model-hf-custom-input">Or Custom Hugging Face Model ID</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input id="model-hf-custom-input" type="text" placeholder="onnx-community/whisper-tiny" style="flex: 1;" />
+              <button id="load-model-hf-button" type="button" style="width: auto; white-space: nowrap; background: linear-gradient(135deg, #a29bfe, #6c5ce7);">Download & Load</button>
+            </div>
+            <button id="save-model-zip-button" type="button" style="width: 100%; background: linear-gradient(135deg, #2ecc71, #27ae60); display: none;">Save Loaded Model as ZIP</button>
+          </div>
           
-          <p id="model-status" class="hint">Upload a model ZIP or specify a URL to load.</p>
+          <p id="model-status" class="hint" style="margin-top: 10px;">Upload a model ZIP or specify a URL to load.</p>
 
           <dl class="meta-grid compact-grid" id="model-meta" hidden>
             <div>
@@ -119,7 +154,9 @@
             </div>
           </dl>
 
-          <button id="load-model-button" type="button" disabled>Load OSS model</button>
+          <div id="model-load-button-container">
+            <button id="load-model-button" type="button" disabled>Load OSS model</button>
+          </div>
         </div>
       </section>
 

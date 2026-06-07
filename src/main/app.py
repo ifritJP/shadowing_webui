@@ -18,6 +18,16 @@ class ApiHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         cwd = Path.cwd().resolve()
         requested_path = self.path.split('?')[0]
+        if requested_path == '/api/generate-bundle':
+            response_data = b'{"status": "ok"}'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(response_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(response_data)
+            return
+
         if requested_path == '/' or requested_path == '/index.html':
             self.send_response(302)
             self.send_header('Location', '/src/mobile/index.html')

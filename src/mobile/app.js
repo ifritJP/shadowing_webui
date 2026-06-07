@@ -15,6 +15,15 @@ const modelFileCount = document.querySelector('#model-file-count');
 const loadModelButton = document.querySelector('#load-model-button');
 const modelUrlInput = document.querySelector('#model-url-input');
 const loadModelUrlButton = document.querySelector('#load-model-url-button');
+const modelSourceSelect = document.querySelector('#model-source-select');
+const modelSourceBundleContainer = document.querySelector('#model-source-bundle-container');
+const modelSourceHfContainer = document.querySelector('#model-source-hf-container');
+const modelHfSelect = document.querySelector('#model-hf-select');
+const modelHfCustomInput = document.querySelector('#model-hf-custom-input');
+const loadModelHfButton = document.querySelector('#load-model-hf-button');
+const saveModelZipButton = document.querySelector('#save-model-zip-button');
+const downloadedHfFiles = new Map();
+let activeHfModelId = null;
 const bundlePanel = document.querySelector('#bundle-panel');
 const bundleLanguage = document.querySelector('#bundle-language');
 const bundleModel = document.querySelector('#bundle-model');
@@ -53,6 +62,8 @@ const generateBundleButton = document.querySelector('#generate-bundle-button');
 const generateAllGradeButton = document.querySelector('#generate-all-grade-button');
 const ttsLevelSelect = document.querySelector('#tts-level-select');
 const ttsPhraseSelect = document.querySelector('#tts-phrase-select');
+const ttsDetails = document.querySelector('#tts-details');
+const ttsOfflineMessage = document.querySelector('#tts-offline-message');
 
 const ttsQueueContainer = document.querySelector('#tts-queue-container');
 const ttsQueueCount = document.querySelector('#tts-queue-count');
@@ -143,13 +154,35 @@ asrEngine.addEventListener('change', handleEngineChange);
 modelBundleInput.addEventListener('change', handleModelBundleUpload);
 loadModelButton.addEventListener('click', loadUploadedOssModel);
 loadModelUrlButton.addEventListener('click', handleModelUrlLoad);
+loadModelHfButton.addEventListener('click', loadUploadedOssModel);
+saveModelZipButton.addEventListener('click', saveHfModelAsZip);
+modelSourceSelect.addEventListener('change', () => {
+  const val = modelSourceSelect.value;
+  if (val === 'huggingface') {
+    modelSourceBundleContainer.hidden = true;
+    modelSourceHfContainer.hidden = false;
+    loadModelButton.disabled = false;
+    modelStatus.textContent = 'Ready to download/load remote model from Hugging Face.';
+    if (downloadedHfFiles.size > 0) {
+      saveModelZipButton.style.display = 'block';
+    } else {
+      saveModelZipButton.style.display = 'none';
+    }
+  } else {
+    modelSourceBundleContainer.hidden = false;
+    modelSourceHfContainer.hidden = true;
+    loadModelButton.disabled = !activeModelBundle;
+    modelStatus.textContent = activeModelBundle ? 'Model bundle ready.' : 'Upload a model ZIP or specify a URL to load.';
+    saveModelZipButton.style.display = 'none';
+  }
+});
 clearStorageButton.addEventListener('click', handleClearStorage);
 transcribeReferenceButton.addEventListener('click', transcribeReferenceAudio);
 recordButton.addEventListener('click', startPracticeCapture);
 stopButton.addEventListener('click', stopPracticeCapture);
 transcribeButton.addEventListener('click', transcribeRecording);
 compareTextButton.addEventListener('click', renderComparison);
-storageListContainer.addEventListener('click', handleStorageItemDeleteClick);
+storageListContainer.addEventListener('click', handleStorageItemClick);
 
 // Load options from localStorage
 autoAsrCheckbox.checked = localStorage.getItem('study_lang_auto_asr') === 'true';
@@ -165,6 +198,7 @@ autoCompareCheckbox.addEventListener('change', () => {
 handleEngineChange();
 updateTtsPhraseOptions();
 initAppStorage();
+checkTtsApiAvailability();
 
 async function handleBundleUpload(event) {
   const [file] = event.target.files ?? [];
@@ -337,20 +371,20 @@ function renderGeneratedQueue() {
 
   generatedQueue.forEach((item, index) => {
     const div = document.createElement('div');
-    div.style = 'display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 4px;';
+    div.className = 'queue-item';
 
     const span = document.createElement('span');
-    span.style = 'flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-size: 0.85rem;';
+    span.className = 'queue-item-text';
     span.textContent = `${index + 1}. ${item.text}`;
     span.title = item.text;
 
     const btnContainer = document.createElement('div');
-    btnContainer.style = 'display: flex; gap: 6px;';
+    btnContainer.className = 'queue-item-btn-container';
 
     const playBtn = document.createElement('button');
     playBtn.type = 'button';
     playBtn.textContent = 'Play';
-    playBtn.style = 'padding: 2px 8px; font-size: 0.75rem; width: auto; background: #33cc66;';
+    playBtn.className = 'queue-item-play-btn';
     playBtn.addEventListener('click', () => {
       const audio = new Audio(item.audioUrl);
       audio.play();
@@ -359,7 +393,7 @@ function renderGeneratedQueue() {
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.textContent = 'Delete';
-    delBtn.style = 'padding: 2px 8px; font-size: 0.75rem; width: auto; background: #ff4d4d;';
+    delBtn.className = 'queue-item-delete-btn';
     delBtn.addEventListener('click', () => {
       URL.revokeObjectURL(item.audioUrl);
       generatedQueue = generatedQueue.filter((q) => q.id !== item.id);
@@ -470,6 +504,17 @@ async function handleTtsRefAudioChange(event) {
     await refreshStorageList();
     return;
   }
+
+  // Validate file duration
+  const audioUrl = URL.createObjectURL(file);
+  const tempAudio = new Audio(audioUrl);
+  tempAudio.addEventListener('loadedmetadata', () => {
+    URL.revokeObjectURL(audioUrl);
+    if (tempAudio.duration >= 30) {
+      alert(`⚠️ 警告：選択された参照音声の長さは ${Math.round(tempAudio.duration)} 秒です。\nVoice Clone は30秒未満の短い音声ファイルで最もよく機能します。必要に応じて短いファイルを選択し直してください。`);
+    }
+  });
+
   try {
     console.log('Saving reference audio to IndexedDB:', file.name);
     await saveToIndexedDB('ttsRefAudio', { name: file.name, data: file });
@@ -956,6 +1001,17 @@ async function loadUploadedOssModel() {
 }
 
 async function ensureUploadedOssModelLoaded(forceReload = false) {
+  const modelSource = modelSourceSelect?.value || 'bundle';
+  if (modelSource === 'huggingface') {
+    const modelId = getSelectedHfModelId();
+    if (!modelId) {
+      throw new Error('Please select or enter a Hugging Face model ID.');
+    }
+    if (forceReload || !activeModelBundle || activeModelBundle.manifest.model_id !== modelId) {
+      await buildModelBundleFromHf(modelId, 'uint8');
+    }
+  }
+
   if (!activeModelBundle) {
     throw new Error('Upload an OSS model bundle first.');
   }
@@ -1028,6 +1084,167 @@ async function ensureUploadedOssModelLoaded(forceReload = false) {
   });
 
   return loadedLocalAsr;
+}
+
+function getSelectedHfModelId() {
+  const selectVal = modelHfSelect?.value;
+  const customVal = modelHfCustomInput?.value?.trim();
+  return customVal || selectVal;
+}
+
+async function buildModelBundleFromHf(modelId, dtype = 'uint8') {
+  modelStatus.textContent = `Fetching file list from Hugging Face API for ${modelId}...`;
+  if (loadModelButton) loadModelButton.disabled = true;
+  if (loadModelHfButton) loadModelHfButton.disabled = true;
+  activeHfModelId = modelId;
+
+  try {
+    // 1. Fetch Hugging Face repo file list
+    const apiUrl = `https://huggingface.co/api/models/${modelId}`;
+    const apiRes = await fetch(apiUrl);
+    if (!apiRes.ok) {
+      throw new Error(`Failed to fetch model info from Hugging Face API: HTTP ${apiRes.status}`);
+    }
+    const modelInfo = await apiRes.json();
+    const repoFiles = (modelInfo.siblings || []).map(s => s.rpath || s.rfilename).filter(Boolean);
+
+    // 2. Resolve files to download (following python logic)
+    const CORE_MODEL_FILES = [
+      "added_tokens.json",
+      "config.json",
+      "generation_config.json",
+      "merges.txt",
+      "normalizer.json",
+      "preprocessor_config.json",
+      "quantize_config.json",
+      "special_tokens_map.json",
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "vocab.json",
+    ];
+
+    const DTYPE_SUFFIX_MAP = {
+      "fp32": "",
+      "fp16": "_fp16",
+      "q8": "_quantized",
+      "q4": "_q4",
+      "int8": "_int8",
+      "uint8": "_uint8",
+      "bnb4": "_bnb4",
+    };
+
+    const suffix = DTYPE_SUFFIX_MAP[dtype];
+    if (suffix === undefined) {
+      throw new Error(`Unsupported dtype: ${dtype}`);
+    }
+
+    const selectedFiles = CORE_MODEL_FILES.filter(path => repoFiles.includes(path));
+
+    const MODEL_FILE_GROUPS = [
+      ["onnx/encoder_model{suffix}.onnx", "onnx/decoder_model_merged{suffix}.onnx"],
+      [
+        "onnx/encoder_model{suffix}.onnx",
+        "onnx/decoder_model{suffix}.onnx",
+        "onnx/decoder_with_past_model{suffix}.onnx",
+      ],
+    ];
+
+    let resolvedGroup = null;
+    for (const group of MODEL_FILE_GROUPS) {
+      const resolved = group.map(pattern => pattern.replace('{suffix}', suffix));
+      if (resolved.every(path => repoFiles.includes(path))) {
+        resolvedGroup = resolved;
+        break;
+      }
+    }
+
+    if (!resolvedGroup) {
+      console.warn(`Could not resolve exact ONNX groups for suffix ${suffix}. Searching for raw ONNX files...`);
+      const onnxFiles = repoFiles.filter(path => path.startsWith("onnx/") && path.endsWith(".onnx"));
+      if (onnxFiles.length > 0) {
+        resolvedGroup = onnxFiles;
+      } else {
+        throw new Error(`Could not resolve ONNX files for dtype ${dtype}. Repo files: ${repoFiles.join(', ')}`);
+      }
+    }
+
+    selectedFiles.push(...resolvedGroup);
+
+    // 3. Download files
+    const fileDataMap = new Map();
+    let completedCount = 0;
+    downloadedHfFiles.clear();
+    
+    for (const filePath of selectedFiles) {
+      modelStatus.textContent = `Downloading ASR files (${completedCount + 1}/${selectedFiles.length}): ${filePath}...`;
+      const fileUrl = `https://huggingface.co/${modelId}/resolve/main/${filePath}`;
+      
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download ${filePath}: HTTP ${response.status}`);
+      }
+      const buffer = await response.arrayBuffer();
+      fileDataMap.set(filePath, buffer);
+      downloadedHfFiles.set(filePath, buffer); // Keep in memory for browser "Save Loaded Model as ZIP" button
+      completedCount += 1;
+    }
+
+    // 4. Create manifest
+    const manifest = {
+      format: "study-lang-mobile-asr-model-bundle/v1",
+      engine: "transformers.js",
+      task: "automatic-speech-recognition",
+      model_id: modelId,
+      dtype: dtype,
+      preferred_device: "wasm",
+      default_variant: {
+        preferred_device: "wasm",
+        dtype: dtype
+      },
+      variants: [
+        {
+          preferred_device: "wasm",
+          dtype: dtype,
+          files: selectedFiles
+        }
+      ],
+      generated_at: new Date().toISOString(),
+      files: selectedFiles
+    };
+
+    // 5. Zip files
+    modelStatus.textContent = `Packaging model ZIP...`;
+    const zip = new JSZip();
+    zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+    for (const [filePath, buffer] of fileDataMap.entries()) {
+      zip.file(filePath, buffer);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const cleanModelName = modelId.replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `mobile_asr_model_bundle_${cleanModelName}.zip`;
+
+    // 6. Save to IndexedDB
+    console.log(`Saving downloaded HF model ZIP to IndexedDB: ${filename}`);
+    await saveToIndexedDB('modelBundle', { name: filename, data: zipBlob });
+    await refreshStorageList();
+
+    // 7. Load using processModelBundle to populate activeModelBundle
+    const arrayBuffer = await zipBlob.arrayBuffer();
+    await processModelBundle(arrayBuffer, 'downloaded from Hugging Face');
+
+    if (saveModelZipButton) {
+      saveModelZipButton.style.display = 'block';
+    }
+
+    modelStatus.textContent = `Model ${modelId} successfully downloaded, packaged, and parsed! Initializing pipeline next...`;
+  } catch (error) {
+    console.error(error);
+    throw new Error(`HF model bundle creation failed: ${error.message}`);
+  } finally {
+    if (loadModelButton) loadModelButton.disabled = false;
+    if (loadModelHfButton) loadModelHfButton.disabled = false;
+  }
 }
 
 function selectModelVariant(manifest) {
@@ -1711,40 +1928,66 @@ async function initAppStorage() {
   await refreshStorageList();
 }
 
-async function handleStorageItemDeleteClick(event) {
-  const btn = event.target.closest('.delete-storage-item-btn');
-  if (!btn) return;
-  
-  const key = btn.getAttribute('data-key');
-  if (!key) return;
-  
-  if (!confirm(`Are you sure you want to delete the saved ${key} from browser storage?`)) {
-    return;
-  }
-  
-  try {
-    await deleteFromIndexedDB(key);
-    console.log(`Deleted ${key} from IndexedDB.`);
+async function handleStorageItemClick(event) {
+  const deleteBtn = event.target.closest('.delete-storage-item-btn');
+  if (deleteBtn) {
+    const key = deleteBtn.getAttribute('data-key');
+    if (!key) return;
     
-    if (key === 'studyBundle') {
-      resetBundleView();
-      bundleStatus.textContent = 'No study bundle loaded.';
-    } else if (key === 'modelBundle') {
-      loadedLocalAsr = null;
-      activeModelBundle = null;
-      modelMeta.hidden = true;
-      loadModelButton.disabled = true;
-      modelStatus.textContent = 'No local model loaded.';
-    } else if (key === 'ttsRefAudio') {
-      const dataTransfer = new DataTransfer();
-      ttsRefAudioInput.files = dataTransfer.files;
-      ttsStatus.textContent = 'Reference audio cleared.';
+    if (!confirm(`Are you sure you want to delete the saved ${key} from browser storage?`)) {
+      return;
     }
     
-    await refreshStorageList();
-  } catch (error) {
-    console.error(`Failed to delete ${key} individually:`, error);
-    alert(`Failed to delete item: ${error.message}`);
+    try {
+      await deleteFromIndexedDB(key);
+      console.log(`Deleted ${key} from IndexedDB.`);
+      
+      if (key === 'studyBundle') {
+        resetBundleView();
+        bundleStatus.textContent = 'No study bundle loaded.';
+      } else if (key === 'modelBundle') {
+        loadedLocalAsr = null;
+        activeModelBundle = null;
+        modelMeta.hidden = true;
+        loadModelButton.disabled = true;
+        modelStatus.textContent = 'No local model loaded.';
+      } else if (key === 'ttsRefAudio') {
+        const dataTransfer = new DataTransfer();
+        ttsRefAudioInput.files = dataTransfer.files;
+        ttsStatus.textContent = 'Reference audio cleared.';
+      }
+      
+      await refreshStorageList();
+    } catch (error) {
+      console.error(`Failed to delete ${key} individually:`, error);
+      alert(`Failed to delete item: ${error.message}`);
+    }
+    return;
+  }
+
+  const downloadBtn = event.target.closest('.download-storage-item-btn');
+  if (downloadBtn) {
+    const key = downloadBtn.getAttribute('data-key');
+    if (!key) return;
+    try {
+      const item = await getFromIndexedDB(key);
+      if (item && item.data) {
+        const url = URL.createObjectURL(item.data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.name || `${key}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log(`Downloaded ${key} from IndexedDB:`, item.name);
+      } else {
+        alert('File data not found in browser storage.');
+      }
+    } catch (error) {
+      console.error('Failed to download item:', error);
+      alert(`Failed to download item: ${error.message}`);
+    }
   }
 }
 
@@ -1779,40 +2022,49 @@ async function refreshStorageList() {
     const modelBundle = await getFromIndexedDB('modelBundle');
     const ttsRefAudio = await getFromIndexedDB('ttsRefAudio');
 
-    let html = '<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px;">';
+    let html = '<ul class="storage-list">';
     
     if (studyBundle && studyBundle.data) {
       const sizeStr = formatBytes(studyBundle.data.size);
-      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 4px;">
+      html += `<li class="storage-item">
         <span><strong>Study Bundle:</strong> ${studyBundle.name || 'Unnamed'} (${sizeStr})</span>
-        <button type="button" class="delete-storage-item-btn" data-key="studyBundle" style="width: auto; padding: 2px 8px; font-size: 0.75rem; background: #ff4d4d; margin: 0; border: none; border-radius: 3px; cursor: pointer; color: white;">Delete</button>
+        <div class="storage-item-btn-container">
+          <button type="button" class="download-storage-item-btn" data-key="studyBundle">Download</button>
+          <button type="button" class="delete-storage-item-btn" data-key="studyBundle">Delete</button>
+        </div>
       </li>`;
     } else {
-      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 4px; opacity: 0.5;">
+      html += `<li class="storage-item empty">
         <span><strong>Study Bundle:</strong> None</span>
       </li>`;
     }
 
     if (ttsRefAudio && ttsRefAudio.data) {
       const sizeStr = formatBytes(ttsRefAudio.data.size);
-      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 4px;">
+      html += `<li class="storage-item">
         <span><strong>TTS Reference Audio:</strong> ${ttsRefAudio.name || 'Unnamed'} (${sizeStr})</span>
-        <button type="button" class="delete-storage-item-btn" data-key="ttsRefAudio" style="width: auto; padding: 2px 8px; font-size: 0.75rem; background: #ff4d4d; margin: 0; border: none; border-radius: 3px; cursor: pointer; color: white;">Delete</button>
+        <div class="storage-item-btn-container">
+          <button type="button" class="download-storage-item-btn" data-key="ttsRefAudio">Download</button>
+          <button type="button" class="delete-storage-item-btn" data-key="ttsRefAudio">Delete</button>
+        </div>
       </li>`;
     } else {
-      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 4px; opacity: 0.5;">
+      html += `<li class="storage-item empty">
         <span><strong>TTS Reference Audio:</strong> None</span>
       </li>`;
     }
 
     if (modelBundle && modelBundle.data) {
       const sizeStr = formatBytes(modelBundle.data.size);
-      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 4px;">
+      html += `<li class="storage-item">
         <span><strong>Model Bundle:</strong> ${modelBundle.name || 'Unnamed'} (${sizeStr})</span>
-        <button type="button" class="delete-storage-item-btn" data-key="modelBundle" style="width: auto; padding: 2px 8px; font-size: 0.75rem; background: #ff4d4d; margin: 0; border: none; border-radius: 3px; cursor: pointer; color: white;">Delete</button>
+        <div class="storage-item-btn-container">
+          <button type="button" class="download-storage-item-btn" data-key="modelBundle">Download</button>
+          <button type="button" class="delete-storage-item-btn" data-key="modelBundle">Delete</button>
+        </div>
       </li>`;
     } else {
-      html += `<li style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 4px; opacity: 0.5;">
+      html += `<li class="storage-item empty">
         <span><strong>Model Bundle:</strong> None</span>
       </li>`;
     }
@@ -1913,4 +2165,82 @@ function diffWords(sourceText, targetText) {
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function checkTtsApiAvailability() {
+  if (!ttsDetails) return;
+  try {
+    const response = await fetch('/api/generate-bundle');
+    if (response.status === 200) {
+      console.log('TTS API server is active.');
+      if (ttsOfflineMessage) ttsOfflineMessage.hidden = true;
+      ttsDetails.open = true;
+    } else {
+      throw new Error(`API returned status ${response.status}`);
+    }
+  } catch (error) {
+    console.warn('TTS API is offline or invalid:', error);
+    ttsDetails.open = false;
+    if (ttsOfflineMessage) {
+      ttsOfflineMessage.hidden = false;
+    }
+  }
+}
+
+async function saveHfModelAsZip() {
+  if (downloadedHfFiles.size === 0) {
+    alert('No downloaded model files found in memory. Please download/load the model first.');
+    return;
+  }
+
+  saveModelZipButton.disabled = true;
+  const oldText = saveModelZipButton.textContent;
+  saveModelZipButton.textContent = 'Packaging model ZIP...';
+
+  try {
+    const zip = new JSZip();
+    const manifest = {
+      format: "study-lang-mobile-asr-model-bundle/v1",
+      engine: "transformers.js",
+      task: "automatic-speech-recognition",
+      model_id: activeHfModelId || "whisper-model",
+      preferred_device: navigator.gpu ? "webgpu" : "wasm",
+      dtype: navigator.gpu ? "fp32" : "uint8",
+      variants: [
+        {
+          preferred_device: "webgpu",
+          dtype: "fp32"
+        },
+        {
+          preferred_device: "wasm",
+          dtype: "uint8"
+        }
+      ]
+    };
+
+    zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+
+    for (const [relPath, buffer] of downloadedHfFiles.entries()) {
+      zip.file(relPath, buffer);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const downloadUrl = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    const cleanModelName = (activeHfModelId || "whisper").replace(/[^a-zA-Z0-9]/g, '_');
+    a.download = `mobile_asr_model_bundle_${cleanModelName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(downloadUrl);
+
+    modelStatus.textContent = `Successfully packaged and downloaded model ZIP! (${downloadedHfFiles.size} files)`;
+  } catch (error) {
+    console.error(error);
+    alert(`Failed to create ZIP: ${error.message}`);
+  } finally {
+    saveModelZipButton.disabled = false;
+    saveModelZipButton.textContent = oldText;
+  }
 }
