@@ -24,6 +24,7 @@ const loadModelHfButton = document.querySelector('#load-model-hf-button');
 const saveModelZipButton = document.querySelector('#save-model-zip-button');
 const downloadedHfFiles = new Map();
 let activeHfModelId = null;
+let lastActiveTrimmedAudio = null;
 const bundlePanel = document.querySelector('#bundle-panel');
 const bundleLanguage = document.querySelector('#bundle-language');
 const bundleModel = document.querySelector('#bundle-model');
@@ -35,6 +36,9 @@ const stopButton = document.querySelector('#stop-button');
 const transcribeButton = document.querySelector('#transcribe-button');
 const recordingStatus = document.querySelector('#recording-status');
 const recordedAudio = document.querySelector('#recorded-audio');
+const originalAudioWrapper = document.querySelector('#original-audio-wrapper');
+const trimmedRecordedAudio = document.querySelector('#trimmed-recorded-audio');
+const trimmedAudioWrapper = document.querySelector('#trimmed-audio-wrapper');
 const transcriptText = document.querySelector('#transcript-text');
 const runtimePanel = document.querySelector('#runtime-panel');
 const runtimeEngine = document.querySelector('#runtime-engine');
@@ -54,6 +58,31 @@ const asrProgressContainer = document.querySelector('#asr-progress-container');
 const asrProgressText = document.querySelector('#asr-progress-text');
 const autoAsrCheckbox = document.querySelector('#auto-asr-checkbox');
 const autoCompareCheckbox = document.querySelector('#auto-compare-checkbox');
+const showSourceCheckbox = document.querySelector('#show-source-checkbox');
+const micSelect = document.querySelector('#mic-select');
+const speakerSelect = document.querySelector('#speaker-select');
+const startPracticeBtn = document.querySelector('#start-practice-btn');
+const debugLogConsole = document.querySelector('#debug-log-console');
+const clearDebugLogBtn = document.querySelector('#clear-debug-log-btn');
+
+function addDebugLog(msg) {
+  const now = new Date();
+  const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+  const line = `[${timeStr}] ${msg}\n`;
+  console.log(line.trim());
+  if (debugLogConsole) {
+    debugLogConsole.textContent += line;
+    debugLogConsole.scrollTop = debugLogConsole.scrollHeight;
+  }
+}
+
+if (clearDebugLogBtn) {
+  clearDebugLogBtn.addEventListener('click', () => {
+    if (debugLogConsole) {
+      debugLogConsole.textContent = '';
+    }
+  });
+}
 
 const ttsTextInput = document.querySelector('#tts-text-input');
 const ttsRefAudioInput = document.querySelector('#tts-ref-audio-input');
@@ -182,11 +211,15 @@ recordButton.addEventListener('click', startPracticeCapture);
 stopButton.addEventListener('click', stopPracticeCapture);
 transcribeButton.addEventListener('click', transcribeRecording);
 compareTextButton.addEventListener('click', renderComparison);
+startPracticeBtn.addEventListener('click', handleStartPractice);
 storageListContainer.addEventListener('click', handleStorageItemClick);
 
 // Load options from localStorage
 autoAsrCheckbox.checked = localStorage.getItem('study_lang_auto_asr') === 'true';
 autoCompareCheckbox.checked = localStorage.getItem('study_lang_auto_compare') === 'true';
+const storedShowSource = localStorage.getItem('study_lang_show_source');
+showSourceCheckbox.checked = storedShowSource === null ? true : storedShowSource === 'true';
+updateSourceVisibility();
 
 autoAsrCheckbox.addEventListener('change', () => {
   localStorage.setItem('study_lang_auto_asr', autoAsrCheckbox.checked);
@@ -194,11 +227,107 @@ autoAsrCheckbox.addEventListener('change', () => {
 autoCompareCheckbox.addEventListener('change', () => {
   localStorage.setItem('study_lang_auto_compare', autoCompareCheckbox.checked);
 });
+showSourceCheckbox.addEventListener('change', () => {
+  localStorage.setItem('study_lang_show_source', showSourceCheckbox.checked);
+  updateSourceVisibility();
+});
+
+function updateSourceVisibility() {
+  sourceText.hidden = !showSourceCheckbox.checked;
+}
+
+micSelect.addEventListener('change', () => {
+  localStorage.setItem('study_lang_selected_mic', micSelect.value);
+});
+
+speakerSelect.addEventListener('change', () => {
+  updateSpeaker(speakerSelect.value);
+});
+
+// Debug audio events for referenceAudio
+if (referenceAudio) {
+  referenceAudio.addEventListener('play', () => addDebugLog('referenceAudio event: play'));
+  referenceAudio.addEventListener('playing', () => addDebugLog('referenceAudio event: playing'));
+  referenceAudio.addEventListener('pause', () => addDebugLog('referenceAudio event: pause'));
+  referenceAudio.addEventListener('ended', () => addDebugLog('referenceAudio event: ended'));
+  referenceAudio.addEventListener('error', (e) => addDebugLog(`referenceAudio event: error (${referenceAudio.error?.message || 'unknown error'})`));
+}
+
+async function updateSpeaker(speakerId) {
+  try {
+    if (typeof referenceAudio.setSinkId === 'function') {
+      await referenceAudio.setSinkId(speakerId);
+      console.log(`Audio output sink set to ${speakerId} for reference audio`);
+    }
+    if (typeof recordedAudio.setSinkId === 'function') {
+      await recordedAudio.setSinkId(speakerId);
+      console.log(`Audio output sink set to ${speakerId} for recorded audio`);
+    }
+    localStorage.setItem('study_lang_selected_speaker', speakerId);
+  } catch (err) {
+    console.error('Failed to set audio output device (sinkId):', err);
+  }
+}
+
+async function updateAudioDevices() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    return;
+  }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    
+    // Build Microphone dropdown
+    const audioInputs = devices.filter(d => d.kind === 'audioinput');
+    micSelect.innerHTML = '';
+    const defaultMicOpt = document.createElement('option');
+    defaultMicOpt.value = '';
+    defaultMicOpt.textContent = 'Default microphone';
+    micSelect.appendChild(defaultMicOpt);
+    
+    const storedMic = localStorage.getItem('study_lang_selected_mic') || '';
+    audioInputs.forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = device.label || `Microphone ${index + 1} (${device.deviceId.substring(0, 5) || 'unknown'}...)`;
+      if (device.deviceId === storedMic) {
+        option.selected = true;
+      }
+      micSelect.appendChild(option);
+    });
+
+    // Build Speaker dropdown
+    const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+    speakerSelect.innerHTML = '';
+    const defaultSpkOpt = document.createElement('option');
+    defaultSpkOpt.value = '';
+    defaultSpkOpt.textContent = 'Default speaker';
+    speakerSelect.appendChild(defaultSpkOpt);
+
+    const storedSpeaker = localStorage.getItem('study_lang_selected_speaker') || '';
+    audioOutputs.forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = device.label || `Speaker ${index + 1} (${device.deviceId.substring(0, 5) || 'unknown'}...)`;
+      if (device.deviceId === storedSpeaker) {
+        option.selected = true;
+      }
+      speakerSelect.appendChild(option);
+    });
+
+    // Apply stored speaker on load
+    if (storedSpeaker) {
+      await updateSpeaker(storedSpeaker);
+    }
+  } catch (err) {
+    console.warn('Failed to enumerate audio devices:', err);
+  }
+}
 
 handleEngineChange();
 updateTtsPhraseOptions();
 initAppStorage();
 checkTtsApiAvailability();
+updateAudioDevices();
 
 async function handleBundleUpload(event) {
   const [file] = event.target.files ?? [];
@@ -670,22 +799,89 @@ async function startPracticeCapture() {
   recognitionFinalText = '';
   recordedChunks = [];
   recordedBlob = null;
+  lastActiveTrimmedAudio = null;
+  originalAudioWrapper.hidden = true;
+  trimmedAudioWrapper.hidden = true;
+  recordedAudio.src = '';
+  trimmedRecordedAudio.src = '';
+
+  const vadVisualizerWrapper = document.querySelector('#vad-visualization-wrapper');
+  if (vadVisualizerWrapper) {
+    vadVisualizerWrapper.hidden = true;
+  }
 
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('navigator.mediaDevices is not available. Microphone access requires a secure context (HTTPS or localhost).');
     }
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const selectedMicId = micSelect.value;
+    const audioConstraints = {
+      noiseSuppression: true,
+      echoCancellation: true,
+      autoGainControl: true
+    };
+    if (selectedMicId) {
+      audioConstraints.deviceId = { exact: selectedMicId };
+    }
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+    addDebugLog('navigator.mediaDevices.getUserMedia: Success');
+
+    // マイクのアクセス許可が得られたため、ラベル名を正しく取得して一覧を更新する
+    await updateAudioDevices();
+    
+    // Stream tracks debugging
+    mediaStream.getTracks().forEach((track, idx) => {
+      addDebugLog(`Stream Track [${idx}]: label="${track.label}" kind="${track.kind}" enabled=${track.enabled} readyState="${track.readyState}"`);
+      track.onmute = () => addDebugLog(`Stream Track [${idx}] event: mute (readyState="${track.readyState}")`);
+      track.onunmute = () => addDebugLog(`Stream Track [${idx}] event: unmute (readyState="${track.readyState}")`);
+      track.onended = () => addDebugLog(`Stream Track [${idx}] event: ended (readyState="${track.readyState}")`);
+    });
+
     mediaRecorder = new MediaRecorder(mediaStream);
+    addDebugLog(`MediaRecorder initialized: state="${mediaRecorder.state}" mimeType="${mediaRecorder.mimeType}"`);
+
+    mediaRecorder.onstart = () => addDebugLog('MediaRecorder event: start');
+    mediaRecorder.onpause = () => addDebugLog('MediaRecorder event: pause');
+    mediaRecorder.onresume = () => addDebugLog('MediaRecorder event: resume');
+    mediaRecorder.onerror = (e) => addDebugLog(`MediaRecorder event: error (${e.error?.name || 'unknown'}: ${e.error?.message || ''})`);
+
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         recordedChunks.push(event.data);
+        addDebugLog(`MediaRecorder event: dataavailable (chunk size=${event.data.size} bytes)`);
       }
     };
-    mediaRecorder.onstop = () => {
+    mediaRecorder.onstop = async () => {
+      recordingStatus.textContent = 'Processing recorded audio...';
       recordedBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
       recordedAudio.src = URL.createObjectURL(recordedBlob);
-      recordedAudio.hidden = false;
+      originalAudioWrapper.hidden = false;
+
+      try {
+        const sampleRate = (loadedLocalAsr?.samplingRate) || 16000;
+        const rawAudioInput = await decodeAudioBlobForAsr(recordedBlob, sampleRate);
+        
+        let sum = 0;
+        for (let i = 0; i < rawAudioInput.length; i += 1) {
+          sum += Math.abs(rawAudioInput[i]);
+        }
+        const meanVal = sum / (rawAudioInput.length || 1);
+        const threshold = meanVal / 3;
+        
+        const audioInput = removeLongSilences(rawAudioInput, sampleRate, threshold);
+        lastActiveTrimmedAudio = audioInput;
+
+        const trimmedBlob = bufferToWav(audioInput, sampleRate);
+        trimmedRecordedAudio.src = URL.createObjectURL(trimmedBlob);
+        trimmedAudioWrapper.hidden = false;
+
+        updateVadVisualizer(audioInput.vadSegments, audioInput.vadNumFrames);
+        recordingStatus.textContent = 'Audio processed. Ready to transcribe.';
+      } catch (err) {
+        console.error('Error processing audio after recording:', err);
+        recordingStatus.textContent = `Error processing audio: ${err.message}`;
+      }
+
       transcribeButton.disabled = false;
       if (autoAsrCheckbox.checked) {
         transcribeRecording();
@@ -712,14 +908,35 @@ async function startPracticeCapture() {
   }
 }
 
+async function handleStartPractice() {
+  try {
+    await startPracticeCapture();
+    if (referenceAudio.src) {
+      referenceAudio.pause();
+      referenceAudio.currentTime = 0;
+      await referenceAudio.play();
+      console.log('Practice started: playing reference audio.');
+    }
+  } catch (error) {
+    console.error('Failed to auto-start practice:', error);
+    recordingStatus.textContent = `Could not start practice: ${error.message}`;
+  }
+}
+
 function stopPracticeCapture() {
+  addDebugLog('stopPracticeCapture() called');
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    addDebugLog('Calling mediaRecorder.stop()');
     mediaRecorder.stop();
   }
   if (mediaStream) {
-    mediaStream.getTracks().forEach((track) => track.stop());
+    mediaStream.getTracks().forEach((track) => {
+      addDebugLog(`Stopping stream track: label="${track.label}"`);
+      track.stop();
+    });
   }
   if (recognition) {
+    addDebugLog('Stopping SpeechRecognition');
     recognition.stop();
   }
 
@@ -942,7 +1159,31 @@ async function transcribeAudioBlobWithOssModel(audioBlob, label, triggerButton =
   try {
     const asr = await ensureUploadedOssModelLoaded();
     const decodeStartedAt = performance.now();
-    const audioInput = await decodeAudioBlobForAsr(audioBlob, asr.samplingRate || 16000);
+    let audioInput;
+
+    if (lastActiveTrimmedAudio && audioBlob === recordedBlob) {
+      audioInput = lastActiveTrimmedAudio;
+    } else {
+      const rawAudioInput = await decodeAudioBlobForAsr(audioBlob, asr.samplingRate || 16000);
+      
+      let sum = 0;
+      for (let i = 0; i < rawAudioInput.length; i += 1) {
+        sum += Math.abs(rawAudioInput[i]);
+      }
+      const meanVal = sum / (rawAudioInput.length || 1);
+      const threshold = meanVal / 3;
+      
+      audioInput = removeLongSilences(rawAudioInput, asr.samplingRate || 16000, threshold);
+      
+      try {
+        const trimmedBlob = bufferToWav(audioInput, asr.samplingRate || 16000);
+        trimmedRecordedAudio.src = URL.createObjectURL(trimmedBlob);
+        trimmedAudioWrapper.hidden = false;
+      } catch (wavErr) {
+        console.error('Failed to create WAV for trimmed audio:', wavErr);
+      }
+    }
+
     const decodeMs = performance.now() - decodeStartedAt;
 
     if (asrProgressText) {
@@ -1480,6 +1721,190 @@ async function decodeAudioBlobForAsr(audioBlob, targetSampleRate = 16000) {
     return resampleMonoAudio(monoChannel, audioBuffer.sampleRate, targetSampleRate);
   } finally {
     await audioContext.close();
+  }
+}
+
+
+function removeLongSilences(audioData, sampleRate = 16000, threshold, marginSec = 0.4) {
+  const frameSize = Math.round(0.02 * sampleRate); // 20ms frame
+  const speechToSilenceFrames = Math.round(1.0 / 0.02); // 1.0s hangover = 50 frames
+  const silenceToSpeechFrames = Math.round(0.1 / 0.02); // 100ms startup = 5 frames
+  const marginSamples = Math.round(marginSec * sampleRate);
+
+  const numFrames = Math.floor(audioData.length / frameSize);
+  if (numFrames === 0) {
+    return audioData;
+  }
+
+  // しきい値が小さすぎ・大きすぎないように制限 (下限 0.015)
+  const activeThreshold = Math.max(threshold, 0.015);
+  
+  const frameFlags = new Uint8Array(numFrames);
+  for (let f = 0; f < numFrames; f += 1) {
+    const startIdx = f * frameSize;
+    let sum = 0;
+    for (let i = 0; i < frameSize; i += 1) {
+      sum += Math.abs(audioData[startIdx + i]);
+    }
+    const energy = sum / frameSize;
+    frameFlags[f] = (energy >= activeThreshold) ? 1 : 0;
+  }
+
+  const segments = [];
+  let inSpeech = false;
+  let silenceCounter = 0;
+  let speechCounter = 0;
+  let segmentStartFrame = 0;
+
+  for (let f = 0; f < numFrames; f += 1) {
+    const isFrameActive = (frameFlags[f] === 1);
+
+    if (inSpeech) {
+      if (!isFrameActive) {
+        silenceCounter += 1;
+        if (silenceCounter >= speechToSilenceFrames) {
+          // 1秒以上の無音が確定したため、この手前までを有声区間とする
+          const segmentEndFrame = f - speechToSilenceFrames + 1;
+          segments.push({ startFrame: segmentStartFrame, endFrame: segmentEndFrame });
+          inSpeech = false;
+          silenceCounter = 0;
+          speechCounter = 0;
+        }
+      } else {
+        silenceCounter = 0;
+      }
+    } else {
+      if (isFrameActive) {
+        speechCounter += 1;
+        if (speechCounter >= silenceToSpeechFrames) {
+          segmentStartFrame = f - silenceToSpeechFrames + 1;
+          inSpeech = true;
+          speechCounter = 0;
+          silenceCounter = 0;
+        }
+      } else {
+        speechCounter = 0;
+      }
+    }
+  }
+
+  if (inSpeech) {
+    segments.push({ startFrame: segmentStartFrame, endFrame: numFrames });
+  }
+
+  if (segments.length === 0) {
+    console.log("VAD: No speech segments detected. Returning empty buffer.");
+    return new Float32Array();
+  }
+
+  const chunks = [];
+  for (let s = 0; s < segments.length; s += 1) {
+    const seg = segments[s];
+    const rawStartIdx = seg.startFrame * frameSize;
+    const rawEndIdx = seg.endFrame * frameSize;
+
+    const startIdx = Math.max(0, rawStartIdx - marginSamples);
+    const endIdx = Math.min(audioData.length, rawEndIdx + marginSamples);
+
+    if (endIdx > startIdx) {
+      chunks.push(audioData.subarray(startIdx, endIdx));
+    }
+  }
+
+  if (chunks.length === 0) {
+    return new Float32Array();
+  }
+  if (chunks.length === 1) {
+    return chunks[0];
+  }
+
+  let totalLength = 0;
+  chunks.forEach(c => totalLength += c.length);
+  const result = new Float32Array(totalLength);
+  let offset = 0;
+  chunks.forEach(c => {
+    result.set(c, offset);
+    offset += c.length;
+  });
+
+  console.log(`VAD (1s threshold) processed. Original: ${audioData.length} samples, New (Speech segments merged): ${totalLength} samples. Detected ${segments.length} segments.`);
+  result.vadSegments = segments;
+  result.vadNumFrames = numFrames;
+  result.vadFrameSize = frameSize;
+  return result;
+}
+
+function updateVadVisualizer(segments, numFrames) {
+  const vadBar = document.querySelector('#vad-bar');
+  const wrapper = document.querySelector('#vad-visualization-wrapper');
+  if (!vadBar || !wrapper) return;
+
+  if (!segments || segments.length === 0 || numFrames === 0) {
+    wrapper.hidden = true;
+    return;
+  }
+
+  const gradientParts = [];
+  let lastPercent = 0;
+
+  for (let s = 0; s < segments.length; s += 1) {
+    const seg = segments[s];
+    const startPercent = (seg.startFrame / numFrames) * 100;
+    const endPercent = (seg.endFrame / numFrames) * 100;
+
+    if (startPercent > lastPercent) {
+      gradientParts.push(`#4b5563 ${lastPercent.toFixed(2)}%`);
+      gradientParts.push(`#4b5563 ${startPercent.toFixed(2)}%`);
+    }
+
+    gradientParts.push(`#3b82f6 ${startPercent.toFixed(2)}%`);
+    gradientParts.push(`#3b82f6 ${endPercent.toFixed(2)}%`);
+
+    lastPercent = endPercent;
+  }
+
+  if (lastPercent < 100) {
+    gradientParts.push(`#4b5563 ${lastPercent.toFixed(2)}%`);
+    gradientParts.push(`#4b5563 100%`);
+  }
+
+  const gradientStr = `linear-gradient(to right, ${gradientParts.join(', ')})`;
+  vadBar.style.background = gradientStr;
+  wrapper.hidden = false;
+}
+
+function bufferToWav(buffer, sampleRate = 16000) {
+  const bufferLength = buffer.length;
+  const wavBuffer = new ArrayBuffer(44 + bufferLength * 2);
+  const view = new DataView(wavBuffer);
+
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + bufferLength * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, bufferLength * 2, true);
+
+  let offset = 44;
+  for (let i = 0; i < bufferLength; i += 1) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+
+  return new Blob([wavBuffer], { type: 'audio/wav' });
+}
+
+function writeString(view, offset, string) {
+  for (let i = 0; i < string.length; i += 1) {
+    view.setUint8(offset + i, string.charCodeAt(i));
   }
 }
 
@@ -2119,7 +2544,6 @@ async function renderComparison() {
   }).join(' ');
 
   comparisonPanel.hidden = false;
-  comparisonPanel.scrollIntoView({ behavior: 'smooth' });
 }
 
 function diffWords(sourceText, targetText) {

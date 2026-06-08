@@ -19,9 +19,9 @@
         </p>
       </header>
 
-      <section class="card">
-        <h2>1. Study bundle (Upload or Generate)</h2>
-        <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 12px;">
+      <details class="card" open>
+        <summary class="section-title">1. Study bundle (Upload or Generate)</summary>
+        <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 12px; margin-top: 12px;">
           <label class="field-label" style="font-weight: bold; margin-bottom: 8px;">Option A: Upload study bundle ZIP</label>
           <input id="bundle-input" type="file" accept=".zip" />
           <p id="bundle-status" class="hint">Upload a ZIP created by the PC workflow.</p>
@@ -80,95 +80,101 @@
           </div>
           <button id="create-bundle-button" type="button" style="background: linear-gradient(135deg, #1aa3ff, #0066cc);">Create & Load Study Bundle</button>
         </div>
-      </section>
+      </details>
 
-      <section class="card">
-        <h2>2. Choose ASR engine</h2>
-        <label class="field-label" for="asr-engine">Engine</label>
-        <select id="asr-engine">
-          <option value="speech-recognition">Browser SpeechRecognition</option>
-          <option value="oss-local" selected>OSS local model bundle</option>
-        </select>
-        <p id="engine-status" class="hint">
-          Start with the browser engine for the fastest path, or switch to the uploaded OSS model for more reproducible testing.
-        </p>
+      <details class="card" open>
+        <summary class="section-title">2. Choose ASR engine</summary>
+        <div style="margin-top: 12px;">
+          <label class="field-label" for="asr-engine">Engine</label>
+          <select id="asr-engine">
+            <option value="speech-recognition">Browser SpeechRecognition</option>
+            <option value="oss-local" selected>OSS local model bundle</option>
+          </select>
+          <p id="engine-status" class="hint">
+            Start with the browser engine for the fastest path, or switch to the uploaded OSS model for more reproducible testing.
+          </p>
 
-        <div id="oss-model-panel" hidden>
-          <div style="margin-bottom: 12px;">
-            <label class="field-label" for="model-source-select">Model Source</label>
-            <select id="model-source-select" style="width: 100%;">
-              <option value="bundle" selected>Local Model Bundle (ZIP / Local URL)</option>
-              <option value="huggingface">Hugging Face Hub (Direct download in browser)</option>
-            </select>
-          </div>
+          <div id="oss-model-panel" hidden>
+            <div style="margin-bottom: 12px;">
+              <label class="field-label" for="model-source-select">Model Source</label>
+              <select id="model-source-select" style="width: 100%;">
+                <option value="bundle" selected>Local Model Bundle (ZIP / Local URL)</option>
+                <option value="huggingface">Hugging Face Hub (Direct download in browser)</option>
+              </select>
+            </div>
 
-          <!-- Local Bundle Section -->
-          <div id="model-source-bundle-container">
-            <label class="field-label" for="model-bundle-input">OSS model bundle</label>
-            <input id="model-bundle-input" type="file" accept=".zip" />
-            
-            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-              <label class="field-label" for="model-url-input">Or load from URL (avoids Chrome sandbox upload issues)</label>
-              <div style="display: flex; gap: 8px;">
-                <input id="model-url-input" type="text" placeholder="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" value="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" style="flex: 1;" />
-                <button id="load-model-url-button" type="button" style="width: auto; white-space: nowrap;">Fetch & Load</button>
+            <!-- Local Bundle Section -->
+            <div id="model-source-bundle-container">
+              <label class="field-label" for="model-bundle-input">OSS model bundle</label>
+              <input id="model-bundle-input" type="file" accept=".zip" />
+              
+              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+                <label class="field-label" for="model-url-input">Or load from URL (avoids Chrome sandbox upload issues)</label>
+                <div style="display: flex; gap: 8px;">
+                  <input id="model-url-input" type="text" placeholder="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" value="/mobile_asr_model_bundle_wasm_uint8_tiny.zip" style="flex: 1;" />
+                  <button id="load-model-url-button" type="button" style="width: auto; white-space: nowrap;">Fetch & Load</button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Hugging Face Hub Section -->
-          <div id="model-source-hf-container" hidden style="margin-top: 10px;">
-            <label class="field-label" for="model-hf-select">Choose Whisper Model</label>
-            <select id="model-hf-select" style="width: 100%; margin-bottom: 8px;">
-              <option value="onnx-community/whisper-tiny">Whisper Tiny (Multi-lingual) - ~40MB</option>
-              <option value="onnx-community/whisper-tiny.en">Whisper Tiny (English-only) - ~40MB</option>
-              <option value="onnx-community/whisper-base" selected>Whisper Base (Multi-lingual) (Recommended) - ~75MB</option>
-              <option value="onnx-community/whisper-base.en">Whisper Base (English-only) - ~75MB</option>
-            </select>
-            <label class="field-label" for="model-hf-custom-input">Or Custom Hugging Face Model ID</label>
-            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-              <input id="model-hf-custom-input" type="text" placeholder="onnx-community/whisper-tiny" style="flex: 1;" />
-              <button id="load-model-hf-button" type="button" style="width: auto; white-space: nowrap; background: linear-gradient(135deg, #a29bfe, #6c5ce7);">Download & Load</button>
+            <!-- Hugging Face Hub Section -->
+            <div id="model-source-hf-container" hidden style="margin-top: 10px;">
+              <label class="field-label" for="model-hf-select">Choose Whisper Model</label>
+              <select id="model-hf-select" style="width: 100%; margin-bottom: 8px;">
+                <option value="onnx-community/whisper-tiny">Whisper Tiny (Multi-lingual) - ~40MB</option>
+                <option value="onnx-community/whisper-tiny.en">Whisper Tiny (English-only) - ~40MB</option>
+                <option value="onnx-community/whisper-base" selected>Whisper Base (Multi-lingual) (Recommended) - ~75MB</option>
+                <option value="onnx-community/whisper-base.en">Whisper Base (English-only) - ~75MB</option>
+              </select>
+              <label class="field-label" for="model-hf-custom-input">Or Custom Hugging Face Model ID</label>
+              <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <input id="model-hf-custom-input" type="text" placeholder="onnx-community/whisper-tiny" style="flex: 1;" />
+                <button id="load-model-hf-button" type="button" style="width: auto; white-space: nowrap; background: linear-gradient(135deg, #a29bfe, #6c5ce7);">Download & Load</button>
+              </div>
+              <button id="save-model-zip-button" type="button" style="width: 100%; background: linear-gradient(135deg, #2ecc71, #27ae60); display: none;">Save Loaded Model as ZIP</button>
             </div>
-            <button id="save-model-zip-button" type="button" style="width: 100%; background: linear-gradient(135deg, #2ecc71, #27ae60); display: none;">Save Loaded Model as ZIP</button>
-          </div>
-          
-          <p id="model-status" class="hint" style="margin-top: 10px;">Upload a model ZIP or specify a URL to load.</p>
+            
+            <p id="model-status" class="hint" style="margin-top: 10px;">Upload a model ZIP or specify a URL to load.</p>
 
-          <dl class="meta-grid compact-grid" id="model-meta" hidden>
-            <div>
-              <dt>Model</dt>
-              <dd id="model-id">-</dd>
-            </div>
-            <div>
-              <dt>Preferred backend</dt>
-              <dd id="model-device">-</dd>
-            </div>
-            <div>
-              <dt>Dtype</dt>
-              <dd id="model-dtype">-</dd>
-            </div>
-            <div>
-              <dt>Packaged files</dt>
-              <dd id="model-file-count">-</dd>
-            </div>
-          </dl>
+            <dl class="meta-grid compact-grid" id="model-meta" hidden>
+              <div>
+                <dt>Model</dt>
+                <dd id="model-id">-</dd>
+              </div>
+              <div>
+                <dt>Preferred backend</dt>
+                <dd id="model-device">-</dd>
+              </div>
+              <div>
+                <dt>Dtype</dt>
+                <dd id="model-dtype">-</dd>
+              </div>
+              <div>
+                <dt>Packaged files</dt>
+                <dd id="model-file-count">-</dd>
+              </div>
+            </dl>
 
-          <div id="model-load-button-container">
-            <button id="load-model-button" type="button" disabled>Load OSS model</button>
+            <div id="model-load-button-container">
+              <button id="load-model-button" type="button" disabled>Load OSS model</button>
+            </div>
           </div>
         </div>
-      </section>
+      </details>
 
       <section class="card" id="bundle-panel" hidden>
-        <h2>3. Review bundle</h2>
+        <h2>3. Shadowing Practice</h2>
+        
+        <!-- Phrase Selection -->
         <div id="bundle-item-selector-container" hidden style="margin-bottom: 14px;">
           <label class="field-label" for="bundle-item-select" style="font-weight: bold; margin-bottom: 6px;">Switch Phrase in Bundle</label>
           <select id="bundle-item-select" style="width: 100%;">
             <!-- 動的生成 -->
           </select>
         </div>
-        <dl class="meta-grid">
+        
+        <!-- Bundle Info Metadata -->
+        <dl class="meta-grid" style="margin-bottom: 14px;">
           <div>
             <dt>Language</dt>
             <dd id="bundle-language">-</dd>
@@ -178,78 +184,134 @@
             <dd id="bundle-model">-</dd>
           </div>
         </dl>
-        <label class="field-label" for="source-text">Source text</label>
-        <textarea id="source-text" rows="8" readonly></textarea>
-        <audio id="reference-audio" controls></audio>
-        <div style="margin-top: 14px; display: flex; justify-content: center;">
-          <button id="transcribe-reference-button" type="button" disabled style="width: auto;">ASR uploaded sample audio</button>
-        </div>
-      </section>
 
-      <section class="card">
-        <h2>4. Record and transcribe</h2>
-        <div class="button-row">
-          <button id="record-button" type="button">Start recording</button>
-          <button id="stop-button" type="button" disabled>Stop</button>
-          <button id="transcribe-button" type="button" disabled>Transcribe</button>
-        </div>
-        <p id="recording-status" class="hint">Microphone permission will be requested on first use.</p>
-        <div style="margin-top: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
-          <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.9rem;">
-            <input id="auto-asr-checkbox" type="checkbox" style="width: auto; margin: 0;" />
-            <span>録音停止後、自動で ASR を実行する</span>
-          </label>
-          <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.9rem;">
-            <input id="auto-compare-checkbox" type="checkbox" style="width: auto; margin: 0;" />
-            <span>ASR 実行後、自動で比較する</span>
-          </label>
-        </div>
-        <div id="asr-progress-container" class="status-banner" hidden style="margin-top: 12px;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div class="spinner" style="width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <span id="asr-progress-text">Transcribing audio with OSS local model...</span>
+        <!-- Source Text and Reference Audio -->
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="field-label" for="source-text" style="margin-bottom: 0;">Source text</label>
+            <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; font-size: 0.9rem; margin: 0; user-select: none;">
+              <input id="show-source-checkbox" type="checkbox" checked style="width: auto; margin: 0;" />
+              <span>Show text</span>
+            </label>
           </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar-value"></div>
+          <textarea id="source-text" rows="3" readonly style="font-size: 1.1rem; font-weight: 500; line-height: 1.4;"></textarea>
+          
+          <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+            <audio id="reference-audio" controls style="height: 40px;"></audio>
+            <button id="transcribe-reference-button" type="button" disabled style="font-size: 0.9rem; padding: 10px 14px; width: auto; align-self: center;">ASR uploaded sample audio</button>
           </div>
         </div>
-        <audio id="recorded-audio" controls hidden></audio>
-      </section>
 
-      <section class="card">
-        <h2>5. Result</h2>
-        <label class="field-label" for="transcript-text">Transcript</label>
-        <textarea id="transcript-text" rows="4" placeholder="Transcription result appears here"></textarea>
-        
-        <div style="margin-top: 12px; display: flex; gap: 8px;">
-          <button id="compare-text-button" type="button" style="width: auto;">Compare Texts (Show Diff)</button>
-        </div>
-        
-        <div id="comparison-panel" class="score-panel" hidden style="margin-top: 14px;">
-          <p class="field-label">Differences (Source vs. ASR)</p>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-            <div>
-              <p class="hint" style="margin: 0 0 6px 0; font-size: 0.8rem;">ASR Transcript (Green = Matched, Red = Wrong/Insertion)</p>
-              <div id="comparison-target" class="mono-block" style="font-size: 0.9rem; padding: 10px; background: #0d142b; min-height: 80px; max-height: 250px; overflow-y: auto;"></div>
+        <!-- Recording Section -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; margin-top: 14px;">
+          <label class="field-label" style="font-weight: bold;">Record and transcribe</label>
+          
+          <div style="margin-bottom: 12px;">
+            <label class="field-label" for="mic-select" style="font-size: 0.9rem; font-weight: normal; margin-bottom: 4px;">Select Input Microphone</label>
+            <select id="mic-select" style="font-size: 0.9rem; padding: 8px 10px; border-radius: 8px;">
+              <option value="">Default microphone</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <label class="field-label" for="speaker-select" style="font-size: 0.9rem; font-weight: normal; margin-bottom: 4px;">Select Output Speaker (if supported)</label>
+            <select id="speaker-select" style="font-size: 0.9rem; padding: 8px 10px; border-radius: 8px;">
+              <option value="">Default speaker</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <button id="start-practice-btn" type="button" style="background: linear-gradient(135deg, #6c5ce7, #4d73ff); font-size: 1.1rem; padding: 14px 18px; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);">Start Practice (Record & Play)</button>
+          </div>
+
+          <div class="button-row">
+            <button id="record-button" type="button">Start recording</button>
+            <button id="stop-button" type="button" disabled>Stop</button>
+            <button id="transcribe-button" type="button" disabled>Transcribe</button>
+          </div>
+          <p id="recording-status" class="hint" style="margin-bottom: 10px;">Microphone permission will be requested on first use.</p>
+          
+          <div style="margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.9rem;">
+              <input id="auto-asr-checkbox" type="checkbox" style="width: auto; margin: 0;" />
+              <span>録音停止後、自動で ASR を実行する</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.9rem;">
+              <input id="auto-compare-checkbox" type="checkbox" style="width: auto; margin: 0;" />
+              <span>ASR 実行後、自動で比較する</span>
+            </label>
+          </div>
+
+          <div id="asr-progress-container" class="status-banner" hidden style="margin-top: 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="spinner" style="width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+              <span id="asr-progress-text">Transcribing audio with OSS local model...</span>
             </div>
-            <div>
-              <p class="hint" style="margin: 0 0 6px 0; font-size: 0.8rem;">Source Text (Red/Strikethrough = Skipped)</p>
-              <div id="comparison-source" class="mono-block" style="font-size: 0.9rem; padding: 10px; background: #0d142b; min-height: 80px; max-height: 250px; overflow-y: auto;"></div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-value"></div>
             </div>
           </div>
-        </div>
-        <div id="runtime-panel" class="score-panel" hidden>
-          <p><strong>Engine:</strong> <span id="runtime-engine">-</span></p>
-          <p><strong>Backend:</strong> <span id="runtime-backend">-</span></p>
-          <p><strong>Model load:</strong> <span id="runtime-load">-</span></p>
-          <p><strong>Transcription:</strong> <span id="runtime-transcribe">-</span></p>
-          <p><strong>Decode:</strong> <span id="runtime-decode">-</span></p>
-          <p><strong>Model run:</strong> <span id="runtime-model">-</span></p>
-          <p><strong>Postprocess:</strong> <span id="runtime-post">-</span></p>
-        </div>
-        <div id="score-panel" class="score-panel" hidden>
-          <p><strong>Word overlap:</strong> <span id="score-value">0%</span></p>
-          <p id="score-note" class="hint"></p>
+          <div id="audio-players-container" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div id="original-audio-wrapper" hidden>
+              <span class="hint" style="font-size: 0.75rem; display: block; margin-bottom: 2px; color: var(--text-dim);">Original Recording</span>
+              <audio id="recorded-audio" controls style="height: 40px; width: 100%;"></audio>
+            </div>
+            <div id="trimmed-audio-wrapper" hidden>
+              <span class="hint" style="font-size: 0.75rem; display: block; margin-bottom: 2px; color: var(--text-dim);">Trimmed Audio (VAD applied)</span>
+              <audio id="trimmed-recorded-audio" controls style="height: 40px; width: 100%;"></audio>
+            </div>
+            <div id="vad-visualization-wrapper" hidden style="margin-top: 4px;">
+              <span class="hint" style="font-size: 0.75rem; display: block; margin-bottom: 4px; color: var(--text-dim);">VAD Segmentation (Blue = Kept, Gray = Removed)</span>
+              <div id="vad-bar" style="height: 12px; width: 100%; border-radius: 6px; background: #4b5563; overflow: hidden; display: flex;"></div>
+            </div>
+          </div>
+
+          <!-- Debug Console Panel -->
+          <div id="debug-log-wrapper" style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="hint" style="font-size: 0.8rem; font-weight: bold; color: var(--accent);">Debug Logs (Real-time)</span>
+              <button id="clear-debug-log-btn" type="button" style="font-size: 0.75rem; padding: 4px 8px; width: auto; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); margin: 0;">Clear</button>
+            </div>
+            <div id="debug-log-console" style="font-family: monospace; font-size: 0.8rem; background: #070b19; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 12px; height: 120px; overflow-y: auto; color: #a2b4f2; white-space: pre-wrap; word-break: break-all;"></div>
+          </div>
+
+        <!-- Result Comparison -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; margin-top: 14px;">
+          <label class="field-label" for="transcript-text">Transcript</label>
+          <textarea id="transcript-text" rows="3" placeholder="Transcription result appears here"></textarea>
+          
+          <div style="margin-top: 10px; display: flex; gap: 8px;">
+            <button id="compare-text-button" type="button" style="width: auto;">Compare Texts (Show Diff)</button>
+          </div>
+          
+          <div id="comparison-panel" class="score-panel" hidden style="margin-top: 14px;">
+            <p class="field-label">Differences (Source vs. ASR)</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <p class="hint" style="margin: 0 0 6px 0; font-size: 0.75rem;">ASR Transcript (Green = Matched, Red = Insertion)</p>
+                <div id="comparison-target" class="mono-block" style="font-size: 0.85rem; padding: 8px; background: #0d142b; min-height: 60px; max-height: 150px; overflow-y: auto;"></div>
+              </div>
+              <div>
+                <p class="hint" style="margin: 0 0 6px 0; font-size: 0.75rem;">Source Text (Red/Strikethrough = Skipped)</p>
+                <div id="comparison-source" class="mono-block" style="font-size: 0.85rem; padding: 8px; background: #0d142b; min-height: 60px; max-height: 150px; overflow-y: auto;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="runtime-panel" class="score-panel" hidden style="margin-top: 10px;">
+            <p><strong>Engine:</strong> <span id="runtime-engine">-</span></p>
+            <p><strong>Backend:</strong> <span id="runtime-backend">-</span></p>
+            <p><strong>Model load:</strong> <span id="runtime-load">-</span></p>
+            <p><strong>Transcription:</strong> <span id="runtime-transcribe">-</span></p>
+            <p><strong>Decode:</strong> <span id="runtime-decode">-</span></p>
+            <p><strong>Model run:</strong> <span id="runtime-model">-</span></p>
+            <p><strong>Postprocess:</strong> <span id="runtime-post">-</span></p>
+          </div>
+
+          <div id="score-panel" class="score-panel" hidden style="margin-top: 10px;">
+            <p><strong>Word overlap:</strong> <span id="score-value">0%</span></p>
+            <p id="score-note" class="hint"></p>
+          </div>
         </div>
       </section>
 
