@@ -1845,8 +1845,12 @@ function removeLongSilences(audioData, sampleRate = 16000, threshold, marginSec 
   }
 
   if (segments.length === 0) {
-    console.log("VAD: No speech segments detected. Returning empty buffer.");
-    return new Float32Array();
+    console.log("VAD: No speech segments detected. Returning original buffer (fallback).");
+    const fallbackResult = new Float32Array(audioData);
+    fallbackResult.vadSegments = [];
+    fallbackResult.vadNumFrames = numFrames;
+    fallbackResult.vadFrameSize = frameSize;
+    return fallbackResult;
   }
 
   const chunks = [];
@@ -1891,7 +1895,7 @@ function updateVadVisualizer(segments, numFrames) {
   const wrapper = document.querySelector('#vad-visualization-wrapper');
   if (!vadBar || !wrapper) return;
 
-  if (!segments || segments.length === 0 || numFrames === 0) {
+  if (!segments || numFrames === 0) {
     wrapper.hidden = true;
     return;
   }
@@ -1899,25 +1903,31 @@ function updateVadVisualizer(segments, numFrames) {
   const gradientParts = [];
   let lastPercent = 0;
 
-  for (let s = 0; s < segments.length; s += 1) {
-    const seg = segments[s];
-    const startPercent = (seg.startFrame / numFrames) * 100;
-    const endPercent = (seg.endFrame / numFrames) * 100;
+  if (segments.length === 0) {
+    // 検出セグメントが0件の場合、全体をグレー（無声区間）として描画
+    gradientParts.push(`#4b5563 0%`);
+    gradientParts.push(`#4b5563 100%`);
+  } else {
+    for (let s = 0; s < segments.length; s += 1) {
+      const seg = segments[s];
+      const startPercent = (seg.startFrame / numFrames) * 100;
+      const endPercent = (seg.endFrame / numFrames) * 100;
 
-    if (startPercent > lastPercent) {
-      gradientParts.push(`#4b5563 ${lastPercent.toFixed(2)}%`);
-      gradientParts.push(`#4b5563 ${startPercent.toFixed(2)}%`);
+      if (startPercent > lastPercent) {
+        gradientParts.push(`#4b5563 ${lastPercent.toFixed(2)}%`);
+        gradientParts.push(`#4b5563 ${startPercent.toFixed(2)}%`);
+      }
+
+      gradientParts.push(`#3b82f6 ${startPercent.toFixed(2)}%`);
+      gradientParts.push(`#3b82f6 ${endPercent.toFixed(2)}%`);
+
+      lastPercent = endPercent;
     }
 
-    gradientParts.push(`#3b82f6 ${startPercent.toFixed(2)}%`);
-    gradientParts.push(`#3b82f6 ${endPercent.toFixed(2)}%`);
-
-    lastPercent = endPercent;
-  }
-
-  if (lastPercent < 100) {
-    gradientParts.push(`#4b5563 ${lastPercent.toFixed(2)}%`);
-    gradientParts.push(`#4b5563 100%`);
+    if (lastPercent < 100) {
+      gradientParts.push(`#4b5563 ${lastPercent.toFixed(2)}%`);
+      gradientParts.push(`#4b5563 100%`);
+    }
   }
 
   const gradientStr = `linear-gradient(to right, ${gradientParts.join(', ')})`;
