@@ -854,6 +854,7 @@ async function startPracticeCapture() {
       }
     };
     mediaRecorder.onstop = async () => {
+      addDebugLog('MediaRecorder event: stop started');
       recordingStatus.textContent = 'Processing recorded audio...';
       recordedBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
       recordedAudio.src = URL.createObjectURL(recordedBlob);
@@ -861,7 +862,9 @@ async function startPracticeCapture() {
 
       try {
         const sampleRate = (loadedLocalAsr?.samplingRate) || 16000;
+        addDebugLog(`Decoding recorded audio blob (size=${recordedBlob.size} bytes, mimeType="${recordedBlob.type}", sampleRate=${sampleRate})...`);
         const rawAudioInput = await decodeAudioBlobForAsr(recordedBlob, sampleRate);
+        addDebugLog(`Audio decoded successfully. Raw length = ${rawAudioInput.length} samples.`);
         
         let sum = 0;
         for (let i = 0; i < rawAudioInput.length; i += 1) {
@@ -869,9 +872,11 @@ async function startPracticeCapture() {
         }
         const meanVal = sum / (rawAudioInput.length || 1);
         const threshold = meanVal / 3;
+        addDebugLog(`VAD parameters calculated. Mean = ${meanVal.toFixed(5)}, Threshold = ${threshold.toFixed(5)}`);
         
         const audioInput = removeLongSilences(rawAudioInput, sampleRate, threshold);
         lastActiveTrimmedAudio = audioInput;
+        addDebugLog(`VAD processing complete. Active segments detected: ${audioInput.vadSegments?.length || 0}`);
 
         const trimmedBlob = bufferToWav(audioInput, sampleRate);
         trimmedRecordedAudio.src = URL.createObjectURL(trimmedBlob);
