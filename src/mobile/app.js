@@ -163,6 +163,8 @@ let loadedLocalAsr = null;
 let recognition = null;
 let mediaRecorder = null;
 let mediaStream = null;
+let silentAudioContext = null;
+let silentOscillator = null;
 let recordedChunks = [];
 let recordedBlob = null;
 let recognitionFinalText = '';
@@ -887,6 +889,31 @@ async function startPracticeCapture() {
         transcribeRecording();
       }
     };
+
+    // Start silent oscillator to keep AudioSession active (preventing mic muting on playback end)
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        silentAudioContext = new AudioContextClass();
+        const selectedSpeakerId = speakerSelect ? speakerSelect.value : '';
+        if (selectedSpeakerId && typeof silentAudioContext.setSinkId === 'function') {
+          await silentAudioContext.setSinkId(selectedSpeakerId);
+          addDebugLog(`Silent AudioContext output set to ${selectedSpeakerId}`);
+        }
+        const gainNode = silentAudioContext.createGain();
+        gainNode.gain.value = 0.0;
+        gainNode.connect(silentAudioContext.destination);
+
+        silentOscillator = silentAudioContext.createOscillator();
+        silentOscillator.connect(gainNode);
+        silentOscillator.start(0);
+        addDebugLog('Silent oscillator started to keep AudioSession active.');
+      }
+    } catch (audioErr) {
+      console.warn('Failed to start silent oscillator:', audioErr);
+      addDebugLog(`Warning: Failed to start silent oscillator: ${audioErr.message}`);
+    }
+
     mediaRecorder.start();
 
     recognition = null;
@@ -938,6 +965,26 @@ function stopPracticeCapture() {
   if (recognition) {
     addDebugLog('Stopping SpeechRecognition');
     recognition.stop();
+  }
+
+  // Stop silent oscillator and AudioContext
+  if (silentOscillator) {
+    try {
+      silentOscillator.stop();
+      addDebugLog('Silent oscillator stopped.');
+    } catch (e) {
+      console.warn('Failed to stop silent oscillator:', e);
+    }
+    silentOscillator = null;
+  }
+  if (silentAudioContext) {
+    try {
+      silentAudioContext.close();
+      addDebugLog('Silent AudioContext closed.');
+    } catch (e) {
+      console.warn('Failed to close silent AudioContext:', e);
+    }
+    silentAudioContext = null;
   }
 
   recordButton.disabled = false;
