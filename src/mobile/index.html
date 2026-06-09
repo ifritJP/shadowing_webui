@@ -165,14 +165,6 @@
       <section class="card" id="bundle-panel" hidden>
         <h2>3. Shadowing Practice</h2>
         
-        <!-- Phrase Selection -->
-        <div id="bundle-item-selector-container" hidden style="margin-bottom: 14px;">
-          <label class="field-label" for="bundle-item-select" style="font-weight: bold; margin-bottom: 6px;">Switch Phrase in Bundle</label>
-          <select id="bundle-item-select" style="width: 100%;">
-            <!-- 動的生成 -->
-          </select>
-        </div>
-        
         <!-- Bundle Info Metadata -->
         <dl class="meta-grid" style="margin-bottom: 14px;">
           <div>
@@ -185,6 +177,14 @@
           </div>
         </dl>
 
+        <!-- Phrase Selection -->
+        <div id="bundle-item-selector-container" hidden style="margin-bottom: 14px;">
+          <label class="field-label" for="bundle-item-select" style="font-weight: bold; margin-bottom: 6px;">Switch Phrase in Bundle</label>
+          <select id="bundle-item-select" style="width: 100%;">
+            <!-- 動的生成 -->
+          </select>
+        </div>
+        
         <!-- Source Text and Reference Audio -->
         <div style="margin-bottom: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -194,7 +194,7 @@
               <span>Show text</span>
             </label>
           </div>
-          <textarea id="source-text" rows="3" readonly style="font-size: 1.1rem; font-weight: 500; line-height: 1.4;"></textarea>
+          <textarea id="source-text" rows="3" readonly style="font-size: 0.9rem; font-weight: 500; line-height: 1.4;"></textarea>
           
           <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
             <audio id="reference-audio" controls style="height: 40px;"></audio>
@@ -206,19 +206,26 @@
         <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; margin-top: 14px;">
           <label class="field-label" style="font-weight: bold;">Record and transcribe</label>
           
-          <div style="margin-bottom: 12px;">
-            <label class="field-label" for="mic-select" style="font-size: 0.9rem; font-weight: normal; margin-bottom: 4px;">Select Input Microphone</label>
-            <select id="mic-select" style="font-size: 0.9rem; padding: 8px 10px; border-radius: 8px;">
-              <option value="">Default microphone</option>
-            </select>
-          </div>
-
-          <div style="margin-bottom: 12px;">
-            <label class="field-label" for="speaker-select" style="font-size: 0.9rem; font-weight: normal; margin-bottom: 4px;">Select Output Speaker (if supported)</label>
-            <select id="speaker-select" style="font-size: 0.9rem; padding: 8px 10px; border-radius: 8px;">
-              <option value="">Default speaker</option>
-            </select>
-          </div>
+          <details id="audio-device-settings" style="margin-bottom: 12px;">
+            <summary style="cursor: pointer; font-size: 0.9rem; color: var(--accent, #a29bfe); user-select: none; list-style: none; display: flex; align-items: center; gap: 6px; padding: 6px 0;">
+              <span id="audio-device-arrow" style="display: inline-block; transition: transform 0.2s;">▶</span>
+              <span>🎙️ Mic / Speaker Settings</span>
+            </summary>
+            <div style="margin-top: 10px;">
+              <div style="margin-bottom: 10px;">
+                <label class="field-label" for="mic-select" style="font-size: 0.9rem; font-weight: normal; margin-bottom: 4px;">Select Input Microphone</label>
+                <select id="mic-select" style="font-size: 0.9rem; padding: 8px 10px; border-radius: 8px;">
+                  <option value="">Default microphone</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label" for="speaker-select" style="font-size: 0.9rem; font-weight: normal; margin-bottom: 4px;">Select Output Speaker (if supported)</label>
+                <select id="speaker-select" style="font-size: 0.9rem; padding: 8px 10px; border-radius: 8px;">
+                  <option value="">Default speaker</option>
+                </select>
+              </div>
+            </div>
+          </details>
 
           <div style="margin-bottom: 12px;">
             <button id="start-practice-btn" type="button" style="background: linear-gradient(135deg, #6c5ce7, #4d73ff); font-size: 1.1rem; padding: 14px 18px; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);">Start Practice (Record & Play)</button>
@@ -264,15 +271,6 @@
               <span class="hint" style="font-size: 0.75rem; display: block; margin-bottom: 4px; color: var(--text-dim);">VAD Segmentation (Blue = Kept, Gray = Removed)</span>
               <div id="vad-bar" style="height: 12px; width: 100%; border-radius: 6px; background: #4b5563; overflow: hidden; display: flex;"></div>
             </div>
-          </div>
-
-          <!-- Debug Console Panel -->
-          <div id="debug-log-wrapper" style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span class="hint" style="font-size: 0.8rem; font-weight: bold; color: var(--accent);">Debug Logs (Real-time)</span>
-              <button id="clear-debug-log-btn" type="button" style="font-size: 0.75rem; padding: 4px 8px; width: auto; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); margin: 0;">Clear</button>
-            </div>
-            <div id="debug-log-console" style="font-family: monospace; font-size: 0.8rem; background: #070b19; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 12px; height: 120px; overflow-y: auto; color: #a2b4f2; white-space: pre-wrap; word-break: break-all;"></div>
           </div>
 
         <!-- Result Comparison -->
@@ -323,6 +321,15 @@
         </div>
         <button id="clear-storage-button" type="button" style="background: linear-gradient(135deg, #ff7b90, #ff4d6a);">Clear browser storage</button>
       </section>
+
+      <!-- Debug Console Panel -->
+      <div id="debug-log-wrapper" style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span class="hint" style="font-size: 0.8rem; font-weight: bold; color: var(--accent);">Debug Logs (Real-time)</span>
+          <button id="clear-debug-log-btn" type="button" style="font-size: 0.75rem; padding: 4px 8px; width: auto; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); margin: 0;">Clear</button>
+        </div>
+        <div id="debug-log-console" style="font-family: monospace; font-size: 0.8rem; background: #070b19; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 12px; height: 120px; overflow-y: auto; color: #a2b4f2; white-space: pre-wrap; word-break: break-all;"></div>
+      </div>
     </main>
 
     <script type="module" src="./app.js"></script>

@@ -331,6 +331,19 @@ initAppStorage();
 checkTtsApiAvailability();
 updateAudioDevices();
 
+// マイク・スピーカー設定アコーディオンの開閉アニメーション
+(function () {
+  const detailsEl = document.querySelector('#audio-device-settings');
+  const arrowEl = document.querySelector('#audio-device-arrow');
+  if (detailsEl && arrowEl) {
+    const syncArrow = () => {
+      arrowEl.style.transform = detailsEl.open ? 'rotate(90deg)' : 'rotate(0deg)';
+    };
+    detailsEl.addEventListener('toggle', syncArrow);
+    syncArrow(); // 初期状態を反映（デフォルト閉）
+  }
+}());
+
 async function handleBundleUpload(event) {
   const [file] = event.target.files ?? [];
   if (!file) {
