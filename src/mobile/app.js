@@ -883,9 +883,11 @@ async function startPracticeCapture() {
         trimmedAudioWrapper.hidden = false;
 
         updateVadVisualizer(audioInput.vadSegments, audioInput.vadNumFrames);
+        addDebugLog(`VAD visualization updated. segments=${audioInput.vadSegments?.length ?? 'N/A'}, numFrames=${audioInput.vadNumFrames ?? 'N/A'}`);
         recordingStatus.textContent = 'Audio processed. Ready to transcribe.';
       } catch (err) {
         console.error('Error processing audio after recording:', err);
+        addDebugLog(`Error in onstop processing: ${err.message || err}`);
         recordingStatus.textContent = `Error processing audio: ${err.message}`;
       }
 
@@ -1867,15 +1869,12 @@ function removeLongSilences(audioData, sampleRate = 16000, threshold, marginSec 
     }
   }
 
-  if (chunks.length === 0) {
-    return new Float32Array();
-  }
-  if (chunks.length === 1) {
-    return chunks[0];
-  }
-
+  // ── chunks を 1 本の Float32Array に結合し、VAD メタを付与して返す ──
+  // chunks.length === 0: 音声区間なし → 空配列を fallback として使う
+  // chunks.length === 1: 1 区間のみ → subarray をコピーして返す
+  //   ※ subarray をそのまま返すと vadSegments 等が付与できないためコピーが必要
   let totalLength = 0;
-  chunks.forEach(c => totalLength += c.length);
+  chunks.forEach(c => { totalLength += c.length; });
   const result = new Float32Array(totalLength);
   let offset = 0;
   chunks.forEach(c => {
